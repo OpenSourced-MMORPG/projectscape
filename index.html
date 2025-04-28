@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OSRS-Style Game</title>
   <style>
     html, body {
@@ -15,21 +14,20 @@
     }
     .container {
       display: flex;
-      flex-direction: column;
       width: 100%;
       height: 100%;
     }
     #game-canvas {
-      width: 100%;
-      height: 81%;
+      width: 81%;
+      height: 100%;
       position: relative;
       background: #222;
       display: flex;
       flex-wrap: wrap;
     }
     #sidebar {
-      width: 100%;
-      height: 19%;
+      width: 19%;
+      height: 100%;
       background: #333;
       display: flex;
       flex-direction: column;
@@ -58,23 +56,6 @@
       height: 40px;
       pointer-events: none;
       z-index: 1;
-    }
-    /* Mobile styles */
-    @media (max-width: 768px) {
-      #game-canvas {
-        height: 70%; /* Adjust for small screens */
-      }
-      #sidebar {
-        height: 30%; /* Sidebar adjusts on smaller screens */
-      }
-      .tile {
-        width: 30px;
-        height: 30px;
-      }
-      svg#player {
-        width: 30px;
-        height: 30px;
-      }
     }
   </style>
 </head>
@@ -115,7 +96,7 @@
       gameCanvas.innerHTML = '';
 
       const width = Math.floor((window.innerWidth * 0.81) / tileSize) * tileSize;
-      const height = Math.floor(window.innerHeight * 0.81 / tileSize) * tileSize;
+      const height = Math.floor(window.innerHeight / tileSize) * tileSize;
 
       gameCanvas.style.width = width + 'px';
       gameCanvas.style.height = height + 'px';
