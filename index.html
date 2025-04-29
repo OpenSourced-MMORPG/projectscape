@@ -243,9 +243,9 @@
       }, 500);
     }
 
-    // touchstart override to handle tap vs drag on mobile
     cameraButton.addEventListener('touchstart', (e) => {
       if (e.touches.length > 1) return;
+      e.stopPropagation();
       const touch = e.touches[0];
       offsetX = touch.clientX - cameraButton.offsetLeft;
       offsetY = touch.clientY - cameraButton.offsetTop;
@@ -258,15 +258,16 @@
     });
 
     window.addEventListener('touchmove', (e) => {
-      if (e.touches.length > 1) return;
+      if (!isDragging || e.touches.length > 1 || e.target !== cameraButton) return;
       touchMoved = true;
       doDrag(e);
     }, { passive: false });
 
     window.addEventListener('touchend', (e) => {
+      if (e.target !== cameraButton) return;
       clearTimeout(tapTimeout);
       if (!isDragging && !touchMoved) {
-        toggleCameraLock(); // treat as a tap
+        toggleCameraLock();
       }
       stopDrag();
     });
