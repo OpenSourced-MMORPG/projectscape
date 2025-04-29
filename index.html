@@ -13,14 +13,18 @@
       background: #000;
       font-family: sans-serif;
     }
-    #game-canvas {
+    #viewport {
       width: 100%;
       height: 100%;
+      overflow: hidden;
       position: relative;
+    }
+    #game-canvas {
+      position: absolute;
       background: #222;
       display: flex;
       flex-wrap: wrap;
-      transform-origin: center center;
+      transform-origin: top left;
       touch-action: none;
       transition: transform 0.2s ease;
     }
@@ -29,7 +33,6 @@
       height: 40px;
       box-sizing: border-box;
       border: 1px solid #111;
-      position: relative;
     }
     svg#player {
       position: absolute;
@@ -41,10 +44,12 @@
   </style>
 </head>
 <body>
-  <div id="game-canvas">
-    <svg id="player">
-      <circle cx="20" cy="20" r="15" fill="lime" />
-    </svg>
+  <div id="viewport">
+    <div id="game-canvas">
+      <svg id="player">
+        <circle cx="20" cy="20" r="15" fill="lime" />
+      </svg>
+    </div>
   </div>
 
   <script>
@@ -52,6 +57,7 @@
     const bpm = 100;
     const beatDuration = 600;
 
+    const viewport = document.getElementById('viewport');
     const gameCanvas = document.getElementById('game-canvas');
     const playerSvg = document.getElementById('player');
 
@@ -73,12 +79,8 @@
 
     function createGrid() {
       gameCanvas.innerHTML = '';
-
       const width = Math.floor(window.innerWidth / tileSize) * tileSize;
       const height = Math.floor(window.innerHeight / tileSize) * tileSize;
-
-      gameCanvas.style.width = width + 'px';
-      gameCanvas.style.height = height + 'px';
 
       cols = width / tileSize;
       rows = height / tileSize;
@@ -86,17 +88,28 @@
       for (let i = 0; i < cols * rows; i++) {
         const tile = document.createElement('div');
         tile.className = 'tile';
-        tile.dataset.index = i;
         gameCanvas.appendChild(tile);
       }
 
-      // Append player after creating tiles
       gameCanvas.appendChild(playerSvg);
+      gameCanvas.style.width = `${cols * tileSize}px`;
+      gameCanvas.style.height = `${rows * tileSize}px`;
     }
 
     function updatePlayerPosition() {
-      playerSvg.style.left = (playerCol * tileSize) + 'px';
-      playerSvg.style.top = (playerRow * tileSize) + 'px';
+      const px = playerCol * tileSize;
+      const py = playerRow * tileSize;
+
+      playerSvg.style.left = px + 'px';
+      playerSvg.style.top = py + 'px';
+
+      const offsetX = (viewport.clientWidth / 2 - tileSize / 2) / scale;
+      const offsetY = (viewport.clientHeight / 2 - tileSize / 2) / scale;
+
+      const translateX = -px + offsetX;
+      const translateY = -py + offsetY;
+
+      gameCanvas.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
     }
 
     function movePlayer() {
@@ -137,7 +150,7 @@
     }
 
     function applyZoom() {
-      gameCanvas.style.transform = `scale(${scale})`;
+      updatePlayerPosition(); // keep centered on zoom
     }
 
     // Scroll wheel zoom (Desktop)
@@ -226,7 +239,6 @@
 
     createGrid();
     updatePlayerPosition();
-    applyZoom();
   </script>
 </body>
 </html>
