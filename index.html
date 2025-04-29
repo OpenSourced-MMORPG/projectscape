@@ -68,6 +68,10 @@
       box-shadow: 0 0 0 3px lime;
     }
 
+    #camera-toggle.drag-ready {
+      box-shadow: 0 0 0 3px yellow;
+    }
+
     #camera-toggle.dragging {
       box-shadow: 0 0 0 3px yellow !important;
     }
@@ -278,7 +282,6 @@
 
     cameraButton.addEventListener('click', toggleCameraLock);
 
-    // Drag-to-move support
     let dragTimeout = null;
     let isDragging = false;
     let offsetX = 0;
@@ -290,8 +293,11 @@
       offsetX = startX - cameraButton.offsetLeft;
       offsetY = startY - cameraButton.offsetTop;
 
+      cameraButton.classList.add('drag-ready');
+
       dragTimeout = setTimeout(() => {
         isDragging = true;
+        cameraButton.classList.remove('drag-ready');
         cameraButton.classList.add('dragging');
       }, 3000);
     }
@@ -309,7 +315,7 @@
     function stopDrag() {
       clearTimeout(dragTimeout);
       isDragging = false;
-      cameraButton.classList.remove('dragging');
+      cameraButton.classList.remove('drag-ready', 'dragging');
     }
 
     cameraButton.addEventListener('mousedown', startDragCheck);
@@ -319,7 +325,6 @@
     window.addEventListener('mouseup', stopDrag);
     window.addEventListener('touchend', stopDrag);
 
-    // Init
     createGrid();
     updatePlayerPosition();
   </script>
