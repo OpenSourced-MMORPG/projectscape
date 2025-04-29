@@ -21,8 +21,8 @@
       display: flex;
       flex-wrap: wrap;
       transform-origin: center center;
-      touch-action: none; /* Disable browser gestures inside game */
-      transition: transform 0.2s ease; /* Smooth zoom */
+      touch-action: none;
+      transition: transform 0.2s ease;
     }
     .tile {
       width: 40px;
@@ -36,7 +36,7 @@
       width: 40px;
       height: 40px;
       z-index: 1;
-      pointer-events: none; /* Player doesn't block clicks */
+      pointer-events: none;
     }
   </style>
 </head>
@@ -50,7 +50,7 @@
   <script>
     const tileSize = 40;
     const bpm = 100;
-    const beatDuration = 600; // ms
+    const beatDuration = 600;
 
     const gameCanvas = document.getElementById('game-canvas');
     const playerSvg = document.getElementById('player');
@@ -90,7 +90,7 @@
         gameCanvas.appendChild(tile);
       }
 
-      // Append player SVG after tiles
+      // Append player after creating tiles
       gameCanvas.appendChild(playerSvg);
     }
 
@@ -127,8 +127,8 @@
 
     function setTargetFromClick(e) {
       const rect = gameCanvas.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const clickY = e.clientY - rect.top;
+      const clickX = (e.clientX - rect.left) / scale;
+      const clickY = (e.clientY - rect.top) / scale;
 
       targetCol = Math.floor(clickX / tileSize);
       targetRow = Math.floor(clickY / tileSize);
