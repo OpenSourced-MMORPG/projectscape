@@ -68,10 +68,6 @@
       box-shadow: 0 0 0 3px lime;
     }
 
-    #camera-toggle.drag-ready {
-      box-shadow: 0 0 0 3px yellow;
-    }
-
     #camera-toggle.dragging {
       box-shadow: 0 0 0 3px yellow !important;
     }
@@ -240,13 +236,9 @@
       }
 
       dragTimeout = setTimeout(() => {
-        cameraButton.classList.add('drag-ready');
-        setTimeout(() => {
-          isDragging = true;
-          cameraButton.classList.remove('drag-ready');
-          cameraButton.classList.add('dragging');
-        }, 300);
-      }, 2700);
+        isDragging = true;
+        cameraButton.classList.add('dragging');
+      }, 500);
     }
 
     function doDrag(e) {
@@ -262,7 +254,7 @@
     function stopDrag() {
       clearTimeout(dragTimeout);
       isDragging = false;
-      cameraButton.classList.remove('drag-ready', 'dragging');
+      cameraButton.classList.remove('dragging');
       saveButtonPosition();
     }
 
