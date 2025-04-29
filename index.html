@@ -35,17 +35,17 @@
       position: absolute;
       width: 40px;
       height: 40px;
-      pointer-events: none;
       z-index: 1;
+      pointer-events: none; /* Player doesn't block clicks */
     }
   </style>
 </head>
 <body>
-  <div id="game-canvas"></div>
-
-  <svg id="player">
-    <circle cx="20" cy="20" r="15" fill="lime" />
-  </svg>
+  <div id="game-canvas">
+    <svg id="player">
+      <circle cx="20" cy="20" r="15" fill="lime" />
+    </svg>
+  </div>
 
   <script>
     const tileSize = 40;
@@ -89,6 +89,9 @@
         tile.dataset.index = i;
         gameCanvas.appendChild(tile);
       }
+
+      // Append player SVG after tiles
+      gameCanvas.appendChild(playerSvg);
     }
 
     function updatePlayerPosition() {
