@@ -112,7 +112,9 @@
     let cameraLocked = true;
 
     let dragTimeout = null;
+    let tapTimeout = null;
     let isDragging = false;
+    let touchMoved = false;
     let offsetX = 0;
     let offsetY = 0;
 
@@ -241,6 +243,34 @@
       }, 500);
     }
 
+    // touchstart override to handle tap vs drag on mobile
+    cameraButton.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 1) return;
+      const touch = e.touches[0];
+      offsetX = touch.clientX - cameraButton.offsetLeft;
+      offsetY = touch.clientY - cameraButton.offsetTop;
+      touchMoved = false;
+
+      tapTimeout = setTimeout(() => {
+        isDragging = true;
+        cameraButton.classList.add('dragging');
+      }, 500);
+    });
+
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 1) return;
+      touchMoved = true;
+      doDrag(e);
+    }, { passive: false });
+
+    window.addEventListener('touchend', (e) => {
+      clearTimeout(tapTimeout);
+      if (!isDragging && !touchMoved) {
+        toggleCameraLock(); // treat as a tap
+      }
+      stopDrag();
+    });
+
     function doDrag(e) {
       if (!isDragging) return;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -260,11 +290,8 @@
 
     cameraButton.addEventListener('click', toggleCameraLock);
     cameraButton.addEventListener('mousedown', startDragCheck);
-    cameraButton.addEventListener('touchstart', startDragCheck, { passive: false });
     window.addEventListener('mousemove', doDrag);
-    window.addEventListener('touchmove', doDrag, { passive: false });
     window.addEventListener('mouseup', stopDrag);
-    window.addEventListener('touchend', stopDrag);
 
     window.addEventListener('wheel', (e) => {
       e.preventDefault();
