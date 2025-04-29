@@ -93,7 +93,7 @@
     </div>
   </div>
 
-  <div id="version-label">v0.1</div>
+  <div id="version-label">v0.2 - toggle fix</div>
   <button id="camera-toggle">Lock</button>
 
   <script>
@@ -129,7 +129,6 @@
     let offsetY = 0;
     let touchStartX = 0;
     let touchStartY = 0;
-    let touchMoved = false;
     const dragThreshold = 5;
 
     function saveButtonPosition() {
@@ -251,24 +250,16 @@
         return;
       }
 
-      dragTimeout = setTimeout(() => {
-        // Wait for touchmove to trigger actual drag based on distance
-      }, 500);
+      dragTimeout = setTimeout(() => {}, 500);
     }
 
     cameraButton.addEventListener('touchstart', (e) => {
       if (e.touches.length > 1) return;
-      e.stopPropagation();
       const touch = e.touches[0];
       touchStartX = touch.clientX;
       touchStartY = touch.clientY;
       offsetX = touch.clientX - cameraButton.offsetLeft;
       offsetY = touch.clientY - cameraButton.offsetTop;
-      touchMoved = false;
-
-      dragTimeout = setTimeout(() => {
-        // drag readiness confirmed, actual drag determined by movement
-      }, 500);
     });
 
     cameraButton.addEventListener('touchmove', (e) => {
@@ -286,13 +277,10 @@
     }, { passive: false });
 
     cameraButton.addEventListener('touchend', (e) => {
-      clearTimeout(dragTimeout);
       const dx = e.changedTouches[0].clientX - touchStartX;
       const dy = e.changedTouches[0].clientY - touchStartY;
       const wasDrag = Math.abs(dx) > dragThreshold || Math.abs(dy) > dragThreshold;
-      if (!wasDrag) {
-        toggleCameraLock();
-      }
+      if (!wasDrag) toggleCameraLock();
       stopDrag();
     });
 
@@ -313,10 +301,7 @@
       saveButtonPosition();
     }
 
-    cameraButton.addEventListener('click', (e) => {
-      if (!isDragging) toggleCameraLock();
-    });
-
+    cameraButton.addEventListener('click', toggleCameraLock);
     cameraButton.addEventListener('mousedown', startDragCheck);
     window.addEventListener('mousemove', doDrag);
     window.addEventListener('mouseup', stopDrag);
