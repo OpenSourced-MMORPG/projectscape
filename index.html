@@ -67,6 +67,10 @@
     #camera-toggle.active {
       box-shadow: 0 0 0 3px lime;
     }
+
+    #camera-toggle.dragging {
+      box-shadow: 0 0 0 3px yellow !important;
+    }
   </style>
 </head>
 <body>
@@ -274,7 +278,7 @@
 
     cameraButton.addEventListener('click', toggleCameraLock);
 
-    // Long press to drag camera button
+    // Drag-to-move support
     let dragTimeout = null;
     let isDragging = false;
     let offsetX = 0;
@@ -288,6 +292,7 @@
 
       dragTimeout = setTimeout(() => {
         isDragging = true;
+        cameraButton.classList.add('dragging');
       }, 3000);
     }
 
@@ -304,6 +309,7 @@
     function stopDrag() {
       clearTimeout(dragTimeout);
       isDragging = false;
+      cameraButton.classList.remove('dragging');
     }
 
     cameraButton.addEventListener('mousedown', startDragCheck);
