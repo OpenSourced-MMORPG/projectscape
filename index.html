@@ -257,14 +257,13 @@
       }, 500);
     });
 
-    window.addEventListener('touchmove', (e) => {
-      if (!isDragging || e.touches.length > 1 || e.target !== cameraButton) return;
+    cameraButton.addEventListener('touchmove', (e) => {
+      if (!isDragging || e.touches.length > 1) return;
       touchMoved = true;
       doDrag(e);
     }, { passive: false });
 
-    window.addEventListener('touchend', (e) => {
-      if (e.target !== cameraButton) return;
+    cameraButton.addEventListener('touchend', (e) => {
       clearTimeout(tapTimeout);
       if (!isDragging && !touchMoved) {
         toggleCameraLock();
@@ -367,6 +366,14 @@
     loadButtonPosition();
     createGrid();
     updatePlayerPosition();
+
+    setInterval(() => {
+      if (movingUp || movingDown || movingLeft || movingRight) {
+        movePlayer();
+      } else if (playerCol !== targetCol || playerRow !== targetRow) {
+        moveToTarget();
+      }
+    }, beatDuration);
   </script>
 </body>
 </html>
