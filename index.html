@@ -71,6 +71,17 @@
     #camera-toggle.dragging {
       box-shadow: 0 0 0 3px yellow !important;
     }
+
+    #version-label {
+      position: fixed;
+      top: 5px;
+      left: 10px;
+      color: #aaa;
+      font-size: 14px;
+      font-family: monospace;
+      z-index: 99;
+      user-select: none;
+    }
   </style>
 </head>
 <body>
@@ -82,6 +93,7 @@
     </div>
   </div>
 
+  <div id="version-label">v0.1</div>
   <button id="camera-toggle">Lock</button>
 
   <script>
@@ -288,7 +300,10 @@
       saveButtonPosition();
     }
 
-    cameraButton.addEventListener('click', toggleCameraLock);
+    cameraButton.addEventListener('click', (e) => {
+      if (!isDragging) toggleCameraLock();
+    });
+
     cameraButton.addEventListener('mousedown', startDragCheck);
     window.addEventListener('mousemove', doDrag);
     window.addEventListener('mouseup', stopDrag);
