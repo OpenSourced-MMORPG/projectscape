@@ -124,11 +124,13 @@
     let cameraLocked = true;
 
     let dragTimeout = null;
-    let tapTimeout = null;
     let isDragging = false;
-    let touchMoved = false;
     let offsetX = 0;
     let offsetY = 0;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchMoved = false;
+    const dragThreshold = 5;
 
     function saveButtonPosition() {
       const pos = {
@@ -250,8 +252,7 @@
       }
 
       dragTimeout = setTimeout(() => {
-        isDragging = true;
-        cameraButton.classList.add('dragging');
+        // Wait for touchmove to trigger actual drag based on distance
       }, 500);
     }
 
@@ -259,25 +260,37 @@
       if (e.touches.length > 1) return;
       e.stopPropagation();
       const touch = e.touches[0];
+      touchStartX = touch.clientX;
+      touchStartY = touch.clientY;
       offsetX = touch.clientX - cameraButton.offsetLeft;
       offsetY = touch.clientY - cameraButton.offsetTop;
       touchMoved = false;
 
-      tapTimeout = setTimeout(() => {
-        isDragging = true;
-        cameraButton.classList.add('dragging');
+      dragTimeout = setTimeout(() => {
+        // drag readiness confirmed, actual drag determined by movement
       }, 500);
     });
 
     cameraButton.addEventListener('touchmove', (e) => {
-      if (!isDragging || e.touches.length > 1) return;
-      touchMoved = true;
-      doDrag(e);
+      if (e.touches.length > 1) return;
+      const touch = e.touches[0];
+      const dx = touch.clientX - touchStartX;
+      const dy = touch.clientY - touchStartY;
+      if (Math.abs(dx) > dragThreshold || Math.abs(dy) > dragThreshold) {
+        if (!isDragging) {
+          isDragging = true;
+          cameraButton.classList.add('dragging');
+        }
+        doDrag(e);
+      }
     }, { passive: false });
 
     cameraButton.addEventListener('touchend', (e) => {
-      clearTimeout(tapTimeout);
-      if (!isDragging && !touchMoved) {
+      clearTimeout(dragTimeout);
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      const wasDrag = Math.abs(dx) > dragThreshold || Math.abs(dy) > dragThreshold;
+      if (!wasDrag) {
         toggleCameraLock();
       }
       stopDrag();
