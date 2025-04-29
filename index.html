@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>OSRS-Style Game</title>
   <style>
     html, body {
@@ -20,7 +21,8 @@
       display: flex;
       flex-wrap: wrap;
       transform-origin: center center;
-      touch-action: none; /* Needed for better mobile gestures */
+      touch-action: none; /* Disable browser gestures inside game */
+      transition: transform 0.2s ease; /* Smooth zoom */
     }
     .tile {
       width: 40px;
@@ -65,7 +67,7 @@
     let movingLeft = false;
     let movingRight = false;
 
-    let scale = 1; // Zoom level
+    let scale = 1;
     const minScale = 0.5;
     const maxScale = 2.5;
 
@@ -147,13 +149,13 @@
       applyZoom();
     }, { passive: false });
 
-    // Touch pinch zoom (Mobile)
+    // Pinch zoom (Mobile)
     let initialDistance = null;
 
     function getTouchDistance(touches) {
       const dx = touches[0].clientX - touches[1].clientX;
       const dy = touches[0].clientY - touches[1].clientY;
-      return Math.sqrt(dx * dx + dy * dy);
+      return Math.hypot(dx, dy);
     }
 
     gameCanvas.addEventListener('touchstart', (e) => {
