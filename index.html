@@ -186,4 +186,124 @@
       else if (playerCol > targetCol) playerCol--;
       if (playerRow < targetRow) playerRow++;
       else if (playerRow > targetRow) playerRow--;
-      update
+      updatePlayerPosition();
+    }
+
+    function setTargetFromClick(e) {
+      const rect = gameCanvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) / scale;
+      const clickY = (e.clientY - rect.top) / scale;
+
+      targetCol = Math.floor(clickX / tileSize);
+      targetRow = Math.floor(clickY / tileSize);
+
+      movingUp = movingDown = movingLeft = movingRight = false;
+    }
+
+    function applyZoom() {
+      updatePlayerPosition();
+    }
+
+    function toggleCameraLock() {
+      cameraLocked = !cameraLocked;
+      cameraButton.classList.toggle('active', cameraLocked);
+      cameraButton.textContent = cameraLocked ? 'Lock' : 'Unlock';
+      updatePlayerPosition();
+    }
+
+    function startDragCheck(e) {
+      e.preventDefault();
+      wasMoved = false;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      offsetX = clientX - cameraButton.offsetLeft;
+      offsetY = clientY - cameraButton.offsetTop;
+
+      dragTimeout = setTimeout(() => {
+        isDragging = true;
+        cameraButton.classList.add('dragging');
+      }, 500);
+    }
+
+    function doDrag(e) {
+      wasMoved = true;
+      if (!isDragging) return;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      cameraButton.style.left = (clientX - offsetX) + 'px';
+      cameraButton.style.top = (clientY - offsetY) + 'px';
+      cameraButton.style.right = 'auto';
+      cameraButton.style.bottom = 'auto';
+    }
+
+    function stopDrag() {
+      clearTimeout(dragTimeout);
+      if (!isDragging && !wasMoved) toggleCameraLock();
+      isDragging = false;
+      wasMoved = false;
+      cameraButton.classList.remove('dragging');
+      saveButtonPosition();
+    }
+
+    cameraButton.addEventListener('mousedown', startDragCheck);
+    cameraButton.addEventListener('touchstart', startDragCheck, { passive: false });
+    window.addEventListener('mousemove', doDrag);
+    window.addEventListener('touchmove', doDrag, { passive: false });
+    window.addEventListener('mouseup', stopDrag);
+    window.addEventListener('touchend', stopDrag);
+
+    window.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomIntensity = 0.1;
+      scale += (e.deltaY < 0 ? zoomIntensity : -zoomIntensity);
+      scale = Math.min(maxScale, Math.max(minScale, scale));
+      applyZoom();
+    }, { passive: false });
+
+    gameCanvas.addEventListener('click', setTargetFromClick);
+
+    window.addEventListener('keydown', (e) => {
+      if (e.repeat) return;
+      switch (e.key) {
+        case 'ArrowUp': movingUp = true; break;
+        case 'ArrowDown': movingDown = true; break;
+        case 'ArrowLeft': movingLeft = true; break;
+        case 'ArrowRight': movingRight = true; break;
+        case 'y': toggleCameraLock(); break;
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      switch (e.key) {
+        case 'ArrowUp': movingUp = false; break;
+        case 'ArrowDown': movingDown = false; break;
+        case 'ArrowLeft': movingLeft = false; break;
+        case 'ArrowRight': movingRight = false; break;
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      const oldCol = playerCol;
+      const oldRow = playerRow;
+      createGrid();
+      playerCol = Math.min(oldCol, cols - 1);
+      playerRow = Math.min(oldRow, rows - 1);
+      targetCol = playerCol;
+      targetRow = playerRow;
+      updatePlayerPosition();
+    });
+
+    loadButtonPosition();
+    createGrid();
+    updatePlayerPosition();
+
+    setInterval(() => {
+      if (movingUp || movingDown || movingLeft || movingRight) {
+        movePlayer();
+      } else if (playerCol !== targetCol || playerRow !== targetRow) {
+        moveToTarget();
+      }
+    }, beatDuration);
+  </script>
+</body>
+</html>
