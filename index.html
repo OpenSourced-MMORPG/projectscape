@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>OSRS-Style Game</title>
   <style>
     html, body {
@@ -115,31 +115,6 @@
 
     let cameraLocked = true;
 
-    let dragTimeout = null;
-    let isDragging = false;
-    let offsetX = 0;
-    let offsetY = 0;
-
-    function saveButtonPosition() {
-      const pos = {
-        left: cameraButton.style.left,
-        top: cameraButton.style.top,
-        right: cameraButton.style.right,
-        bottom: cameraButton.style.bottom
-      };
-      localStorage.setItem('cameraButtonPosition', JSON.stringify(pos));
-    }
-
-    function loadButtonPosition() {
-      const saved = localStorage.getItem('cameraButtonPosition');
-      if (!saved) return;
-      const pos = JSON.parse(saved);
-      cameraButton.style.left = pos.left;
-      cameraButton.style.top = pos.top;
-      cameraButton.style.right = pos.right;
-      cameraButton.style.bottom = pos.bottom;
-    }
-
     function createGrid() {
       gameCanvas.innerHTML = '';
       const width = Math.floor(window.innerWidth / tileSize) * tileSize;
@@ -218,62 +193,6 @@
       updatePlayerPosition();
     }
 
-    function toggleCameraLock() {
-      cameraLocked = !cameraLocked;
-      cameraButton.classList.toggle('active', cameraLocked);
-      cameraButton.textContent = cameraLocked ? 'Lock' : 'Unlock';
-      updatePlayerPosition();
-    }
-
-    function startDragCheck(e) {
-      const startX = (e.touches ? e.touches[0].clientX : e.clientX);
-      const startY = (e.touches ? e.touches[0].clientY : e.clientY);
-      offsetX = startX - cameraButton.offsetLeft;
-      offsetY = startY - cameraButton.offsetTop;
-
-      const ctrlHeld = e.ctrlKey || (e.touches ? false : window.event.ctrlKey);
-
-      if (ctrlHeld) {
-        isDragging = true;
-        cameraButton.classList.add('dragging');
-        return;
-      }
-
-      dragTimeout = setTimeout(() => {
-        cameraButton.classList.add('drag-ready');
-        setTimeout(() => {
-          isDragging = true;
-          cameraButton.classList.remove('drag-ready');
-          cameraButton.classList.add('dragging');
-        }, 300);
-      }, 2700);
-    }
-
-    function doDrag(e) {
-      if (!isDragging) return;
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      cameraButton.style.left = (clientX - offsetX) + 'px';
-      cameraButton.style.top = (clientY - offsetY) + 'px';
-      cameraButton.style.right = 'auto';
-      cameraButton.style.bottom = 'auto';
-    }
-
-    function stopDrag() {
-      clearTimeout(dragTimeout);
-      isDragging = false;
-      cameraButton.classList.remove('drag-ready', 'dragging');
-      saveButtonPosition();
-    }
-
-    cameraButton.addEventListener('click', toggleCameraLock);
-    cameraButton.addEventListener('mousedown', startDragCheck);
-    cameraButton.addEventListener('touchstart', startDragCheck, { passive: false });
-    window.addEventListener('mousemove', doDrag);
-    window.addEventListener('touchmove', doDrag, { passive: false });
-    window.addEventListener('mouseup', stopDrag);
-    window.addEventListener('touchend', stopDrag);
-
     window.addEventListener('wheel', (e) => {
       e.preventDefault();
       const zoomIntensity = 0.1;
@@ -282,7 +201,13 @@
       applyZoom();
     }, { passive: false });
 
-    gameCanvas.addEventListener('click', setTargetFromClick);
+    let initialDistance = null;
+
+    function getTouchDistance(touches) {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.hypot(dx, dy);
+    }
 
     gameCanvas.addEventListener('touchstart', (e) => {
       if (e.touches.length === 2) {
@@ -307,11 +232,16 @@
       }
     });
 
-    function getTouchDistance(touches) {
-      const dx = touches[0].clientX - touches[1].clientX;
-      const dy = touches[0].clientY - touches[1].clientY;
-      return Math.hypot(dx, dy);
-    }
+    window.addEventListener('resize', () => {
+      const oldCol = playerCol;
+      const oldRow = playerRow;
+      createGrid();
+      playerCol = Math.min(oldCol, cols - 1);
+      playerRow = Math.min(oldRow, rows - 1);
+      targetCol = playerCol;
+      targetRow = playerRow;
+      updatePlayerPosition();
+    });
 
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
@@ -333,18 +263,68 @@
       }
     });
 
-    window.addEventListener('resize', () => {
-      const oldCol = playerCol;
-      const oldRow = playerRow;
-      createGrid();
-      playerCol = Math.min(oldCol, cols - 1);
-      playerRow = Math.min(oldRow, rows - 1);
-      targetCol = playerCol;
-      targetRow = playerRow;
-      updatePlayerPosition();
-    });
+    gameCanvas.addEventListener('click', setTargetFromClick);
 
-    loadButtonPosition();
+    setInterval(() => {
+      if (movingUp || movingDown || movingLeft || movingRight) {
+        movePlayer();
+      } else if (playerCol !== targetCol || playerRow !== targetRow) {
+        moveToTarget();
+      }
+    }, beatDuration);
+
+    function toggleCameraLock() {
+      cameraLocked = !cameraLocked;
+      cameraButton.classList.toggle('active', cameraLocked);
+      cameraButton.textContent = cameraLocked ? 'Lock' : 'Unlock';
+      updatePlayerPosition();
+    }
+
+    cameraButton.addEventListener('click', toggleCameraLock);
+
+    let dragTimeout = null;
+    let isDragging = false;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    function startDragCheck(e) {
+      const startX = (e.touches ? e.touches[0].clientX : e.clientX);
+      const startY = (e.touches ? e.touches[0].clientY : e.clientY);
+      offsetX = startX - cameraButton.offsetLeft;
+      offsetY = startY - cameraButton.offsetTop;
+
+      cameraButton.classList.add('drag-ready');
+
+      dragTimeout = setTimeout(() => {
+        isDragging = true;
+        cameraButton.classList.remove('drag-ready');
+        cameraButton.classList.add('dragging');
+      }, 3000);
+    }
+
+    function doDrag(e) {
+      if (!isDragging) return;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      cameraButton.style.left = (clientX - offsetX) + 'px';
+      cameraButton.style.top = (clientY - offsetY) + 'px';
+      cameraButton.style.right = 'auto';
+      cameraButton.style.bottom = 'auto';
+    }
+
+    function stopDrag() {
+      clearTimeout(dragTimeout);
+      isDragging = false;
+      cameraButton.classList.remove('drag-ready', 'dragging');
+    }
+
+    cameraButton.addEventListener('mousedown', startDragCheck);
+    cameraButton.addEventListener('touchstart', startDragCheck, { passive: false });
+    window.addEventListener('mousemove', doDrag);
+    window.addEventListener('touchmove', doDrag, { passive: false });
+    window.addEventListener('mouseup', stopDrag);
+    window.addEventListener('touchend', stopDrag);
+
     createGrid();
     updatePlayerPosition();
   </script>
