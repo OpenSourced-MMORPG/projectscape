@@ -72,6 +72,16 @@
     #camera-toggle.dragging {
       box-shadow: 0 0 0 3px yellow !important;
     }
+
+    #version {
+      position: fixed;
+      top: 5px;
+      left: 10px;
+      color: white;
+      font-size: 14px;
+      z-index: 100;
+      font-family: monospace;
+    }
   </style>
 </head>
 <body>
@@ -84,6 +94,7 @@
   </div>
 
   <button id="camera-toggle">Lock</button>
+  <div id="version">v1.1 – Drag delay + Ctrl</div>
 
   <script>
     const tileSize = 40;
@@ -111,6 +122,15 @@
     const maxScale = 2.5;
 
     let cameraLocked = true;
+
+    // Restore saved button position
+    const savedPos = JSON.parse(localStorage.getItem('cameraBtnPos'));
+    if (savedPos) {
+      cameraButton.style.left = savedPos.left;
+      cameraButton.style.top = savedPos.top;
+      cameraButton.style.right = 'auto';
+      cameraButton.style.bottom = 'auto';
+    }
 
     function createGrid() {
       gameCanvas.innerHTML = '';
@@ -285,15 +305,21 @@
     let offsetY = 0;
 
     function startDragCheck(e) {
+      const isCtrl = e.ctrlKey || (e.touches && e.touches[0].ctrlKey);
       const startX = (e.touches ? e.touches[0].clientX : e.clientX);
       const startY = (e.touches ? e.touches[0].clientY : e.clientY);
       offsetX = startX - cameraButton.offsetLeft;
       offsetY = startY - cameraButton.offsetTop;
 
-      dragTimeout = setTimeout(() => {
+      if (isCtrl) {
         isDragging = true;
         cameraButton.classList.add('drag-ready', 'dragging');
-      }, 3000);
+      } else {
+        dragTimeout = setTimeout(() => {
+          isDragging = true;
+          cameraButton.classList.add('drag-ready', 'dragging');
+        }, 1000);
+      }
     }
 
     function doDrag(e) {
@@ -310,6 +336,11 @@
       clearTimeout(dragTimeout);
       isDragging = false;
       cameraButton.classList.remove('drag-ready', 'dragging');
+
+      localStorage.setItem('cameraBtnPos', JSON.stringify({
+        left: cameraButton.style.left,
+        top: cameraButton.style.top
+      }));
     }
 
     cameraButton.addEventListener('mousedown', startDragCheck);
