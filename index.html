@@ -93,7 +93,7 @@
     </div>
   </div>
 
-  <div id="version-label">v0.2 - toggle fix</div>
+  <div id="version-label">v0.3 - long press drag fix</div>
   <button id="camera-toggle">Lock</button>
 
   <script>
@@ -250,39 +250,11 @@
         return;
       }
 
-      dragTimeout = setTimeout(() => {}, 500);
+      dragTimeout = setTimeout(() => {
+        isDragging = true;
+        cameraButton.classList.add('dragging');
+      }, 500); // 500ms hold to drag
     }
-
-    cameraButton.addEventListener('touchstart', (e) => {
-      if (e.touches.length > 1) return;
-      const touch = e.touches[0];
-      touchStartX = touch.clientX;
-      touchStartY = touch.clientY;
-      offsetX = touch.clientX - cameraButton.offsetLeft;
-      offsetY = touch.clientY - cameraButton.offsetTop;
-    });
-
-    cameraButton.addEventListener('touchmove', (e) => {
-      if (e.touches.length > 1) return;
-      const touch = e.touches[0];
-      const dx = touch.clientX - touchStartX;
-      const dy = touch.clientY - touchStartY;
-      if (Math.abs(dx) > dragThreshold || Math.abs(dy) > dragThreshold) {
-        if (!isDragging) {
-          isDragging = true;
-          cameraButton.classList.add('dragging');
-        }
-        doDrag(e);
-      }
-    }, { passive: false });
-
-    cameraButton.addEventListener('touchend', (e) => {
-      const dx = e.changedTouches[0].clientX - touchStartX;
-      const dy = e.changedTouches[0].clientY - touchStartY;
-      const wasDrag = Math.abs(dx) > dragThreshold || Math.abs(dy) > dragThreshold;
-      if (!wasDrag) toggleCameraLock();
-      stopDrag();
-    });
 
     function doDrag(e) {
       if (!isDragging) return;
@@ -294,14 +266,18 @@
       cameraButton.style.bottom = 'auto';
     }
 
-    function stopDrag() {
+    function stopDrag(e) {
       clearTimeout(dragTimeout);
+      
+      if (!isDragging) {
+        toggleCameraLock();
+      }
+
       isDragging = false;
       cameraButton.classList.remove('dragging');
       saveButtonPosition();
     }
 
-    cameraButton.addEventListener('click', toggleCameraLock);
     cameraButton.addEventListener('mousedown', startDragCheck);
     window.addEventListener('mousemove', doDrag);
     window.addEventListener('mouseup', stopDrag);
@@ -315,35 +291,6 @@
     }, { passive: false });
 
     gameCanvas.addEventListener('click', setTargetFromClick);
-
-    gameCanvas.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 2) {
-        initialDistance = getTouchDistance(e.touches);
-      }
-    });
-
-    gameCanvas.addEventListener('touchmove', (e) => {
-      if (e.touches.length === 2 && initialDistance) {
-        e.preventDefault();
-        const currentDistance = getTouchDistance(e.touches);
-        const zoomFactor = currentDistance / initialDistance;
-        scale = Math.min(maxScale, Math.max(minScale, scale * zoomFactor));
-        applyZoom();
-        initialDistance = currentDistance;
-      }
-    }, { passive: false });
-
-    gameCanvas.addEventListener('touchend', (e) => {
-      if (e.touches.length < 2) {
-        initialDistance = null;
-      }
-    });
-
-    function getTouchDistance(touches) {
-      const dx = touches[0].clientX - touches[1].clientX;
-      const dy = touches[0].clientY - touches[1].clientY;
-      return Math.hypot(dx, dy);
-    }
 
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
