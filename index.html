@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -11,63 +12,65 @@
       height: 100%;
       background: #000;
       font-family: sans-serif;
-    }#viewport {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  position: relative;
-}
+    }
 
-#game-canvas {
-  position: absolute;
-  background: #222;
-  display: flex;
-  flex-wrap: wrap;
-  transform-origin: top left;
-  touch-action: none;
-  transition: transform 0.2s ease;
-}
+    #viewport {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      position: relative;
+    }
 
-.tile {
-  width: 40px;
-  height: 40px;
-  box-sizing: border-box;
-  border: 1px solid #111;
-}
+    #game-canvas {
+      position: absolute;
+      background: #222;
+      display: flex;
+      flex-wrap: wrap;
+      transform-origin: top left;
+      touch-action: none;
+      transition: transform 0.2s ease;
+    }
 
-svg#player {
-  position: absolute;
-  width: 40px;
-  height: 40px;
-  z-index: 1;
-  pointer-events: none;
-}
+    .tile {
+      width: 40px;
+      height: 40px;
+      box-sizing: border-box;
+      border: 1px solid #111;
+    }
 
-#camera-toggle {
-  position: fixed;
-  width: 80px;
-  height: 80px;
-  font-size: 14px;
-  z-index: 10;
-  border: none;
-  background: gray;
-  color: white;
-  border-radius: 12px;
-  outline: none;
-  transition: box-shadow 0.2s ease, background 0.2s ease;
-  user-select: none;
-  touch-action: none;
-}
+    svg#player {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      z-index: 1;
+      pointer-events: none;
+    }
 
-#camera-toggle.active {
-  background: lime;
-  box-shadow: 0 0 0 3px lime;
-}
+    #camera-toggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 80px;
+      height: 80px;
+      font-size: 14px;
+      z-index: 10;
+      border: none;
+      background: #444;
+      color: white;
+      border-radius: 12px;
+      outline: none;
+      transition: box-shadow 0.2s ease;
+      user-select: none;
+      touch-action: none;
+    }
 
-#camera-toggle.dragging {
-  box-shadow: 0 0 0 3px yellow !important;
-}
+    #camera-toggle.active {
+      box-shadow: 0 0 0 3px lime;
+    }
 
+    #camera-toggle.dragging {
+      box-shadow: 0 0 0 3px yellow !important;
+    }
   </style>
 </head>
 <body>
@@ -78,7 +81,10 @@ svg#player {
       </svg>
     </div>
   </div>
-  <button id="camera-toggle">Lock</button>  <script>
+
+  <button id="camera-toggle">Lock</button>
+
+  <script>
     const tileSize = 40;
     const beatDuration = 600;
 
@@ -87,62 +93,63 @@ svg#player {
     const playerSvg = document.getElementById('player');
     const cameraButton = document.getElementById('camera-toggle');
 
-    let cols = 0, rows = 0;
-    let playerCol = 5, playerRow = 5;
-    let targetCol = 5, targetRow = 5;
-    let movingUp = false, movingDown = false, movingLeft = false, movingRight = false;
-    let scale = 1, minScale = 0.5, maxScale = 2.5;
+    let cols = 0;
+    let rows = 0;
+    let playerCol = 5;
+    let playerRow = 5;
+    let targetCol = 5;
+    let targetRow = 5;
+
+    let movingUp = false;
+    let movingDown = false;
+    let movingLeft = false;
+    let movingRight = false;
+
+    let scale = 1;
+    const minScale = 0.5;
+    const maxScale = 2.5;
+
     let cameraLocked = true;
 
-    let isDragging = false;
-    let wasMoved = false;
     let dragTimeout = null;
-    let offsetX = 0, offsetY = 0;
+    let isDragging = false;
+    let offsetX = 0;
+    let offsetY = 0;
 
     function saveButtonPosition() {
-      const leftPercent = (cameraButton.offsetLeft / window.innerWidth) * 100;
-      const topPercent = (cameraButton.offsetTop / window.innerHeight) * 100;
-      localStorage.setItem('cameraButtonPosition', JSON.stringify({ leftPercent, topPercent }));
+      const pos = {
+        left: cameraButton.style.left,
+        top: cameraButton.style.top,
+        right: cameraButton.style.right,
+        bottom: cameraButton.style.bottom
+      };
+      localStorage.setItem('cameraButtonPosition', JSON.stringify(pos));
     }
 
     function loadButtonPosition() {
       const saved = localStorage.getItem('cameraButtonPosition');
-      if (!saved) {
-        cameraButton.style.right = '20px';
-        cameraButton.style.bottom = '20px';
-        return;
-      }
-      const { leftPercent, topPercent } = JSON.parse(saved);
-      cameraButton.style.left = `${(leftPercent / 100) * window.innerWidth}px`;
-      cameraButton.style.top = `${(topPercent / 100) * window.innerHeight}px`;
-      cameraButton.style.right = 'auto';
-      cameraButton.style.bottom = 'auto';
-    }
-
-    function clampButtonToScreen() {
-      const rect = cameraButton.getBoundingClientRect();
-      const padding = 10;
-      const maxLeft = window.innerWidth - rect.width - padding;
-      const maxTop = window.innerHeight - rect.height - padding;
-      const currentLeft = parseFloat(cameraButton.style.left || '0');
-      const currentTop = parseFloat(cameraButton.style.top || '0');
-      cameraButton.style.left = Math.max(padding, Math.min(currentLeft, maxLeft)) + 'px';
-      cameraButton.style.top = Math.max(padding, Math.min(currentTop, maxTop)) + 'px';
-      cameraButton.style.right = 'auto';
-      cameraButton.style.bottom = 'auto';
+      if (!saved) return;
+      const pos = JSON.parse(saved);
+      cameraButton.style.left = pos.left;
+      cameraButton.style.top = pos.top;
+      cameraButton.style.right = pos.right;
+      cameraButton.style.bottom = pos.bottom;
     }
 
     function createGrid() {
       gameCanvas.innerHTML = '';
       const width = Math.floor(window.innerWidth / tileSize) * tileSize;
       const height = Math.floor(window.innerHeight / tileSize) * tileSize;
+
       cols = width / tileSize;
       rows = height / tileSize;
+
       for (let i = 0; i < cols * rows; i++) {
         const tile = document.createElement('div');
         tile.className = 'tile';
         gameCanvas.appendChild(tile);
       }
+
       gameCanvas.appendChild(playerSvg);
       gameCanvas.style.width = `${cols * tileSize}px`;
       gameCanvas.style.height = `${rows * tileSize}px`;
@@ -151,8 +158,10 @@ svg#player {
     function updatePlayerPosition() {
       const px = playerCol * tileSize;
       const py = playerRow * tileSize;
+
       playerSvg.style.left = px + 'px';
       playerSvg.style.top = py + 'px';
+
       if (cameraLocked) {
         const offsetX = (viewport.clientWidth / 2 - tileSize / 2) / scale;
         const offsetY = (viewport.clientHeight / 2 - tileSize / 2) / scale;
@@ -167,10 +176,12 @@ svg#player {
     function movePlayer() {
       let newCol = playerCol;
       let newRow = playerRow;
+
       if (movingUp) newRow--;
       if (movingDown) newRow++;
       if (movingLeft) newCol--;
       if (movingRight) newCol++;
+
       if (newCol >= 0 && newCol < cols && newRow >= 0 && newRow < rows) {
         playerCol = newCol;
         playerRow = newRow;
@@ -189,13 +200,18 @@ svg#player {
     }
 
     function setTargetFromClick(e) {
-      e.stopPropagation();
       const rect = gameCanvas.getBoundingClientRect();
       const clickX = (e.clientX - rect.left) / scale;
       const clickY = (e.clientY - rect.top) / scale;
+
       targetCol = Math.floor(clickX / tileSize);
       targetRow = Math.floor(clickY / tileSize);
+
       movingUp = movingDown = movingLeft = movingRight = false;
+    }
+
+    function applyZoom() {
+      updatePlayerPosition();
     }
 
     function toggleCameraLock() {
@@ -206,12 +222,19 @@ svg#player {
     }
 
     function startDragCheck(e) {
-      e.preventDefault();
-      wasMoved = false;
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      offsetX = clientX - cameraButton.offsetLeft;
-      offsetY = clientY - cameraButton.offsetTop;
+      const startX = (e.touches ? e.touches[0].clientX : e.clientX);
+      const startY = (e.touches ? e.touches[0].clientY : e.clientY);
+      offsetX = startX - cameraButton.offsetLeft;
+      offsetY = startY - cameraButton.offsetTop;
+
+      const ctrlHeld = e.ctrlKey || (e.touches ? false : window.event.ctrlKey);
+
+      if (ctrlHeld) {
+        isDragging = true;
+        cameraButton.classList.add('dragging');
+        return;
+      }
+
       dragTimeout = setTimeout(() => {
         isDragging = true;
         cameraButton.classList.add('dragging');
@@ -219,7 +242,6 @@ svg#player {
     }
 
     function doDrag(e) {
-      wasMoved = true;
       if (!isDragging) return;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -231,13 +253,12 @@ svg#player {
 
     function stopDrag() {
       clearTimeout(dragTimeout);
-      if (!isDragging && !wasMoved) toggleCameraLock();
       isDragging = false;
-      wasMoved = false;
       cameraButton.classList.remove('dragging');
       saveButtonPosition();
     }
 
+    cameraButton.addEventListener('click', toggleCameraLock);
     cameraButton.addEventListener('mousedown', startDragCheck);
     cameraButton.addEventListener('touchstart', startDragCheck, { passive: false });
     window.addEventListener('mousemove', doDrag);
@@ -250,10 +271,39 @@ svg#player {
       const zoomIntensity = 0.1;
       scale += (e.deltaY < 0 ? zoomIntensity : -zoomIntensity);
       scale = Math.min(maxScale, Math.max(minScale, scale));
-      updatePlayerPosition();
+      applyZoom();
     }, { passive: false });
 
     gameCanvas.addEventListener('click', setTargetFromClick);
+
+    gameCanvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        initialDistance = getTouchDistance(e.touches);
+      }
+    });
+
+    gameCanvas.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2 && initialDistance) {
+        e.preventDefault();
+        const currentDistance = getTouchDistance(e.touches);
+        const zoomFactor = currentDistance / initialDistance;
+        scale = Math.min(maxScale, Math.max(minScale, scale * zoomFactor));
+        applyZoom();
+        initialDistance = currentDistance;
+      }
+    }, { passive: false });
+
+    gameCanvas.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) {
+        initialDistance = null;
+      }
+    });
+
+    function getTouchDistance(touches) {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.hypot(dx, dy);
+    }
 
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
@@ -284,21 +334,11 @@ svg#player {
       targetCol = playerCol;
       targetRow = playerRow;
       updatePlayerPosition();
-      loadButtonPosition();
-      clampButtonToScreen();
     });
 
     loadButtonPosition();
-    clampButtonToScreen();
     createGrid();
     updatePlayerPosition();
-
-    setInterval(() => {
-      if (movingUp || movingDown || movingLeft || movingRight) {
-        movePlayer();
-      } else if (playerCol !== targetCol || playerRow !== targetRow) {
-        moveToTarget();
-      }
-    }, beatDuration);
-  </script></body>
+  </script>
+</body>
 </html>
