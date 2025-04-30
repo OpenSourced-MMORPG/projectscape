@@ -95,6 +95,7 @@ svg#player {
     let cameraLocked = true;
 
     let isDragging = false;
+    let wasMoved = false;
     let dragTimeout = null;
     let offsetX = 0, offsetY = 0;
 
@@ -206,6 +207,7 @@ svg#player {
 
     function startDragCheck(e) {
       e.preventDefault();
+      wasMoved = false;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
       offsetX = clientX - cameraButton.offsetLeft;
@@ -217,6 +219,7 @@ svg#player {
     }
 
     function doDrag(e) {
+      wasMoved = true;
       if (!isDragging) return;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -228,8 +231,9 @@ svg#player {
 
     function stopDrag() {
       clearTimeout(dragTimeout);
-      if (!isDragging) toggleCameraLock();
+      if (!isDragging && !wasMoved) toggleCameraLock();
       isDragging = false;
+      wasMoved = false;
       cameraButton.classList.remove('dragging');
       saveButtonPosition();
     }
