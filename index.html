@@ -82,6 +82,49 @@
       z-index: 100;
       font-family: monospace;
     }
+
+    #skill-drawer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      max-height: 80%;
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      font-family: sans-serif;
+      transition: transform 0.2s ease;
+      transform: translateY(calc(100% - 40px));
+      z-index: 50;
+      touch-action: none;
+    }
+
+    #skill-drawer.open {
+      transform: translateY(0%);
+    }
+
+    #drawer-header {
+      height: 40px;
+      line-height: 40px;
+      padding: 0 16px;
+      background: rgba(255, 255, 255, 0.1);
+      border-top: 1px solid #444;
+      font-weight: bold;
+      cursor: grab;
+    }
+
+    #drawer-content {
+      padding: 10px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 14px;
+    }
+
+    .skill {
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
@@ -95,6 +138,18 @@
 
   <button id="camera-toggle">Lock</button>
   <div id="version">v1.1 – Drag delay + Ctrl</div>
+
+  <div id="skill-drawer">
+    <div id="drawer-header">Skills</div>
+    <div id="drawer-content">
+      <div class="skill">Woodcutting</div>
+      <div class="skill">Fishing</div>
+      <div class="skill">Firemaking</div>
+      <div class="skill">Cooking</div>
+      <div class="skill">Mining</div>
+      <div class="skill">Smithing</div>
+    </div>
+  </div>
 
   <script>
     const tileSize = 40;
@@ -123,7 +178,6 @@
 
     let cameraLocked = true;
 
-    // Restore saved button position
     const savedPos = JSON.parse(localStorage.getItem('cameraBtnPos'));
     if (savedPos) {
       cameraButton.style.left = savedPos.left;
@@ -349,6 +403,48 @@
     window.addEventListener('touchmove', doDrag, { passive: false });
     window.addEventListener('mouseup', stopDrag);
     window.addEventListener('touchend', stopDrag);
+
+    // Skill Drawer Drag Logic
+    const drawer = document.getElementById('skill-drawer');
+    const header = document.getElementById('drawer-header');
+
+    let startY = 0;
+    let currentY = 0;
+    let isDraggingDrawer = false;
+    let drawerHeight = 0;
+
+    function onStart(e) {
+      isDraggingDrawer = true;
+      drawerHeight = drawer.offsetHeight;
+      startY = e.touches ? e.touches[0].clientY : e.clientY;
+      drawer.style.transition = 'none';
+    }
+
+    function onMove(e) {
+      if (!isDraggingDrawer) return;
+      currentY = e.touches ? e.touches[0].clientY : e.clientY;
+      let deltaY = currentY - startY;
+      deltaY = Math.max(Math.min(deltaY, drawerHeight), -drawerHeight);
+      drawer.style.transform = `translateY(calc(${drawer.classList.contains('open') ? '0%' : '100% - 40px'} + ${deltaY}px))`;
+    }
+
+    function onEnd() {
+      if (!isDraggingDrawer) return;
+      isDraggingDrawer = false;
+      drawer.style.transition = 'transform 0.2s ease';
+      const deltaY = currentY - startY;
+      if (deltaY < -50) drawer.classList.add('open');
+      else if (deltaY > 50) drawer.classList.remove('open');
+      else drawer.classList.toggle('open', drawer.classList.contains('open'));
+      drawer.style.transform = '';
+    }
+
+    header.addEventListener('mousedown', onStart);
+    header.addEventListener('touchstart', onStart, { passive: false });
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('touchmove', onMove, { passive: false });
+    window.addEventListener('mouseup', onEnd);
+    window.addEventListener('touchend', onEnd);
 
     createGrid();
     updatePlayerPosition();
