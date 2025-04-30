@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Multi-Tab Drawer</title>
+  <title>Carousel Drawer</title>
   <style>
     html, body {
       margin: 0;
@@ -26,6 +26,8 @@
       transform: translateY(calc(100% - 40px));
       z-index: 50;
       touch-action: none;
+      display: flex;
+      flex-direction: column;
     }
 
     #drawer.open {
@@ -42,18 +44,6 @@
       border-top: 1px solid #444;
     }
 
-    .tab {
-      flex: 1;
-      text-align: center;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .tab.active {
-      font-weight: bold;
-      text-decoration: underline;
-    }
-
     #lock-btn {
       width: 32px;
       height: 32px;
@@ -65,9 +55,25 @@
       user-select: none;
     }
 
-    #drawer-content {
+    #carousel-wrapper {
+      position: relative;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    #carousel {
+      display: flex;
+      width: 300%;
+      height: 100%;
+      transition: transform 0.3s ease;
+    }
+
+    .panel {
+      width: 100%;
       padding: 10px 16px;
-      font-size: 14px;
+      box-sizing: border-box;
+      flex-shrink: 0;
+      overflow-y: auto;
     }
 
     .entry {
@@ -76,66 +82,62 @@
       background: rgba(255, 255, 255, 0.1);
       border-radius: 4px;
     }
+
+    .arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,0.1);
+      border: none;
+      color: white;
+      font-size: 20px;
+      padding: 6px 10px;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    #left-arrow { left: 4px; }
+    #right-arrow { right: 4px; }
   </style>
 </head>
 <body>
 
 <div id="drawer">
   <div id="drawer-header">
-    <div class="tab active" data-tab="skills">Skills</div>
-    <div class="tab" data-tab="quests">Quests</div>
-    <div class="tab" data-tab="friends">Friends</div>
-    <button id="lock-btn" title="Toggle Lock">🔓</button>
+    <span>Menu</span>
+    <button id="lock-btn">🔓</button>
   </div>
-  <div id="drawer-content"></div>
+  <div id="carousel-wrapper">
+    <div id="carousel">
+      <div class="panel" id="panel-skills">
+        <div class="entry">Woodcutting</div>
+        <div class="entry">Fishing</div>
+        <div class="entry">Firemaking</div>
+      </div>
+      <div class="panel" id="panel-quests">
+        <div class="entry">The Lost Sword</div>
+        <div class="entry">Goblin Diplomacy</div>
+      </div>
+      <div class="panel" id="panel-friends">
+        <div class="entry">Alice</div>
+        <div class="entry">Bob</div>
+      </div>
+    </div>
+    <button class="arrow" id="left-arrow">⬅</button>
+    <button class="arrow" id="right-arrow">➡</button>
+  </div>
 </div>
 
 <script>
   const drawer = document.getElementById('drawer');
-  const tabs = document.querySelectorAll('.tab');
-  const content = document.getElementById('drawer-content');
   const lockBtn = document.getElementById('lock-btn');
+  const carousel = document.getElementById('carousel');
+  const leftArrow = document.getElementById('left-arrow');
+  const rightArrow = document.getElementById('right-arrow');
 
-  const tabData = {
-    skills: ['Woodcutting', 'Fishing', 'Firemaking', 'Cooking', 'Mining'],
-    quests: ['The Lost Sword', 'Goblin Diplomacy', 'Tower of Trials'],
-    friends: ['Alice', 'Bob', 'Catherine']
-  };
-
-  let activeTab = 'skills';
   let isDrawerLocked = false;
-
-  function setContent(tab) {
-    content.innerHTML = '';
-    tabData[tab].forEach(item => {
-      const div = document.createElement('div');
-      div.className = 'entry';
-      div.textContent = item;
-      content.appendChild(div);
-    });
-  }
-
-  function setActiveTab(tabName) {
-    if (isDrawerLocked) return;
-
-    tabs.forEach(tab => tab.classList.remove('active'));
-    const newTab = document.querySelector(`.tab[data-tab="${tabName}"]`);
-    if (newTab) newTab.classList.add('active');
-
-    activeTab = tabName;
-    setContent(tabName);
-    drawer.classList.add('open');
-  }
-
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      if (tab.dataset.tab === activeTab && drawer.classList.contains('open')) {
-        drawer.classList.remove('open');
-      } else {
-        setActiveTab(tab.dataset.tab);
-      }
-    });
-  });
+  let panelIndex = 0;
+  const totalPanels = 3;
 
   lockBtn.addEventListener('click', () => {
     isDrawerLocked = !isDrawerLocked;
@@ -143,17 +145,23 @@
     if (isDrawerLocked) drawer.classList.remove('open');
   });
 
-  // Drag logic
+  function showPanel(index) {
+    panelIndex = Math.max(0, Math.min(totalPanels - 1, index));
+    carousel.style.transform = `translateX(-${panelIndex * 100}%)`;
+  }
+
+  leftArrow.addEventListener('click', () => showPanel(panelIndex - 1));
+  rightArrow.addEventListener('click', () => showPanel(panelIndex + 1));
+
+  // Drag to open/close drawer
   const header = document.getElementById('drawer-header');
   let startY = 0;
   let currentY = 0;
   let isDraggingDrawer = false;
-  let drawerHeight = 0;
 
   function onStart(e) {
     if (isDrawerLocked) return;
     isDraggingDrawer = true;
-    drawerHeight = drawer.offsetHeight;
     startY = e.touches ? e.touches[0].clientY : e.clientY;
     drawer.style.transition = 'none';
   }
@@ -161,9 +169,10 @@
   function onMove(e) {
     if (!isDraggingDrawer) return;
     currentY = e.touches ? e.touches[0].clientY : e.clientY;
-    let deltaY = currentY - startY;
-    deltaY = Math.max(Math.min(deltaY, drawerHeight), -drawerHeight);
-    drawer.style.transform = `translateY(calc(${drawer.classList.contains('open') ? '0%' : '100% - 40px'} + ${deltaY}px))`;
+    const deltaY = currentY - startY;
+    const drawerHeight = drawer.offsetHeight;
+    const clampedY = Math.max(Math.min(deltaY, drawerHeight), -drawerHeight);
+    drawer.style.transform = `translateY(calc(${drawer.classList.contains('open') ? '0%' : '100% - 40px'} + ${clampedY}px))`;
   }
 
   function onEnd() {
@@ -183,8 +192,17 @@
   window.addEventListener('mouseup', onEnd);
   window.addEventListener('touchend', onEnd);
 
-  // Initialize
-  setContent(activeTab);
+  // Swipe to change panel
+  let startX = 0;
+  let endX = 0;
+  carousel.addEventListener('touchstart', e => startX = e.touches[0].clientX);
+  carousel.addEventListener('touchend', e => {
+    endX = e.changedTouches[0].clientX;
+    if (startX - endX > 50) showPanel(panelIndex + 1);
+    else if (endX - startX > 50) showPanel(panelIndex - 1);
+  });
+
+  showPanel(panelIndex);
 </script>
 
 </body>
