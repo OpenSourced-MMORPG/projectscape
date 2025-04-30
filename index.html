@@ -99,13 +99,9 @@ svg#player {
     let offsetX = 0, offsetY = 0;
 
     function saveButtonPosition() {
-      const pos = {
-        left: cameraButton.style.left,
-        top: cameraButton.style.top,
-        right: cameraButton.style.right,
-        bottom: cameraButton.style.bottom
-      };
-      localStorage.setItem('cameraButtonPosition', JSON.stringify(pos));
+      const leftPercent = (cameraButton.offsetLeft / window.innerWidth) * 100;
+      const topPercent = (cameraButton.offsetTop / window.innerHeight) * 100;
+      localStorage.setItem('cameraButtonPosition', JSON.stringify({ leftPercent, topPercent }));
     }
 
     function loadButtonPosition() {
@@ -115,11 +111,11 @@ svg#player {
         cameraButton.style.bottom = '20px';
         return;
       }
-      const pos = JSON.parse(saved);
-      cameraButton.style.left = pos.left;
-      cameraButton.style.top = pos.top;
-      cameraButton.style.right = pos.right;
-      cameraButton.style.bottom = pos.bottom;
+      const { leftPercent, topPercent } = JSON.parse(saved);
+      cameraButton.style.left = `${(leftPercent / 100) * window.innerWidth}px`;
+      cameraButton.style.top = `${(topPercent / 100) * window.innerHeight}px`;
+      cameraButton.style.right = 'auto';
+      cameraButton.style.bottom = 'auto';
     }
 
     function clampButtonToScreen() {
@@ -284,6 +280,7 @@ svg#player {
       targetCol = playerCol;
       targetRow = playerRow;
       updatePlayerPosition();
+      loadButtonPosition();
       clampButtonToScreen();
     });
 
