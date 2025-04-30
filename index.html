@@ -48,23 +48,22 @@
 
     #camera-toggle {
       position: fixed;
-      bottom: 20px;
-      right: 20px;
       width: 80px;
       height: 80px;
       font-size: 14px;
       z-index: 10;
       border: none;
-      background: #444;
+      background: gray;
       color: white;
       border-radius: 12px;
       outline: none;
-      transition: box-shadow 0.2s ease;
+      transition: box-shadow 0.2s ease, background 0.2s ease;
       user-select: none;
       touch-action: none;
     }
 
     #camera-toggle.active {
+      background: lime;
       box-shadow: 0 0 0 3px lime;
     }
 
@@ -93,7 +92,7 @@
     </div>
   </div>
 
-  <div id="version-label">v0.4 - drag+click fix</div>
+  <div id="version-label">v0.5 - button color + clamp</div>
   <button id="camera-toggle">Lock</button>
 
   <script>
@@ -128,12 +127,30 @@
 
     function loadButtonPosition() {
       const saved = localStorage.getItem('cameraButtonPosition');
-      if (!saved) return;
+      if (!saved) {
+        cameraButton.style.right = '20px';
+        cameraButton.style.bottom = '20px';
+        return;
+      }
       const pos = JSON.parse(saved);
       cameraButton.style.left = pos.left;
       cameraButton.style.top = pos.top;
       cameraButton.style.right = pos.right;
       cameraButton.style.bottom = pos.bottom;
+    }
+
+    function clampButtonToScreen() {
+      const rect = cameraButton.getBoundingClientRect();
+      const padding = 10;
+      const maxLeft = window.innerWidth - rect.width - padding;
+      const maxTop = window.innerHeight - rect.height - padding;
+      const currentLeft = parseFloat(cameraButton.style.left || '0');
+      const currentTop = parseFloat(cameraButton.style.top || '0');
+
+      cameraButton.style.left = Math.max(padding, Math.min(currentLeft, maxLeft)) + 'px';
+      cameraButton.style.top = Math.max(padding, Math.min(currentTop, maxTop)) + 'px';
+      cameraButton.style.right = 'auto';
+      cameraButton.style.bottom = 'auto';
     }
 
     function createGrid() {
@@ -196,7 +213,7 @@
     }
 
     function setTargetFromClick(e) {
-      e.stopPropagation(); // Prevents accidental button toggles
+      e.stopPropagation();
       const rect = gameCanvas.getBoundingClientRect();
       const clickX = (e.clientX - rect.left) / scale;
       const clickY = (e.clientY - rect.top) / scale;
@@ -291,9 +308,11 @@
       targetCol = playerCol;
       targetRow = playerRow;
       updatePlayerPosition();
+      clampButtonToScreen();
     });
 
     loadButtonPosition();
+    clampButtonToScreen();
     createGrid();
     updatePlayerPosition();
 
