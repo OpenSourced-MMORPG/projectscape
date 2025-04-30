@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -12,75 +11,63 @@
       height: 100%;
       background: #000;
       font-family: sans-serif;
-    }
+    }#viewport {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
 
-    #viewport {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      position: relative;
-    }
+#game-canvas {
+  position: absolute;
+  background: #222;
+  display: flex;
+  flex-wrap: wrap;
+  transform-origin: top left;
+  touch-action: none;
+  transition: transform 0.2s ease;
+}
 
-    #game-canvas {
-      position: absolute;
-      background: #222;
-      display: flex;
-      flex-wrap: wrap;
-      transform-origin: top left;
-      touch-action: none;
-      transition: transform 0.2s ease;
-    }
+.tile {
+  width: 40px;
+  height: 40px;
+  box-sizing: border-box;
+  border: 1px solid #111;
+}
 
-    .tile {
-      width: 40px;
-      height: 40px;
-      box-sizing: border-box;
-      border: 1px solid #111;
-    }
+svg#player {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  z-index: 1;
+  pointer-events: none;
+}
 
-    svg#player {
-      position: absolute;
-      width: 40px;
-      height: 40px;
-      z-index: 1;
-      pointer-events: none;
-    }
+#camera-toggle {
+  position: fixed;
+  width: 80px;
+  height: 80px;
+  font-size: 14px;
+  z-index: 10;
+  border: none;
+  background: gray;
+  color: white;
+  border-radius: 12px;
+  outline: none;
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+  user-select: none;
+  touch-action: none;
+}
 
-    #camera-toggle {
-      position: fixed;
-      width: 80px;
-      height: 80px;
-      font-size: 14px;
-      z-index: 10;
-      border: none;
-      background: gray;
-      color: white;
-      border-radius: 12px;
-      outline: none;
-      transition: box-shadow 0.2s ease, background 0.2s ease;
-      user-select: none;
-      touch-action: none;
-    }
+#camera-toggle.active {
+  background: lime;
+  box-shadow: 0 0 0 3px lime;
+}
 
-    #camera-toggle.active {
-      background: lime;
-      box-shadow: 0 0 0 3px lime;
-    }
+#camera-toggle.dragging {
+  box-shadow: 0 0 0 3px yellow !important;
+}
 
-    #camera-toggle.dragging {
-      box-shadow: 0 0 0 3px yellow !important;
-    }
-
-    #version-label {
-      position: fixed;
-      top: 5px;
-      left: 10px;
-      color: #aaa;
-      font-size: 14px;
-      font-family: monospace;
-      z-index: 99;
-      user-select: none;
-    }
   </style>
 </head>
 <body>
@@ -91,11 +78,7 @@
       </svg>
     </div>
   </div>
-
-  <div id="version-label">v0.5 - button color + clamp</div>
-  <button id="camera-toggle">Lock</button>
-
-  <script>
+  <button id="camera-toggle">Lock</button>  <script>
     const tileSize = 40;
     const beatDuration = 600;
 
@@ -146,7 +129,6 @@
       const maxTop = window.innerHeight - rect.height - padding;
       const currentLeft = parseFloat(cameraButton.style.left || '0');
       const currentTop = parseFloat(cameraButton.style.top || '0');
-
       cameraButton.style.left = Math.max(padding, Math.min(currentLeft, maxLeft)) + 'px';
       cameraButton.style.top = Math.max(padding, Math.min(currentTop, maxTop)) + 'px';
       cameraButton.style.right = 'auto';
@@ -159,13 +141,11 @@
       const height = Math.floor(window.innerHeight / tileSize) * tileSize;
       cols = width / tileSize;
       rows = height / tileSize;
-
       for (let i = 0; i < cols * rows; i++) {
         const tile = document.createElement('div');
         tile.className = 'tile';
         gameCanvas.appendChild(tile);
       }
-
       gameCanvas.appendChild(playerSvg);
       gameCanvas.style.width = `${cols * tileSize}px`;
       gameCanvas.style.height = `${rows * tileSize}px`;
@@ -176,7 +156,6 @@
       const py = playerRow * tileSize;
       playerSvg.style.left = px + 'px';
       playerSvg.style.top = py + 'px';
-
       if (cameraLocked) {
         const offsetX = (viewport.clientWidth / 2 - tileSize / 2) / scale;
         const offsetY = (viewport.clientHeight / 2 - tileSize / 2) / scale;
@@ -235,7 +214,6 @@
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
       offsetX = clientX - cameraButton.offsetLeft;
       offsetY = clientY - cameraButton.offsetTop;
-
       dragTimeout = setTimeout(() => {
         isDragging = true;
         cameraButton.classList.add('dragging');
@@ -252,11 +230,9 @@
       cameraButton.style.bottom = 'auto';
     }
 
-    function stopDrag(e) {
+    function stopDrag() {
       clearTimeout(dragTimeout);
-      if (!isDragging) {
-        toggleCameraLock();
-      }
+      if (!isDragging) toggleCameraLock();
       isDragging = false;
       cameraButton.classList.remove('dragging');
       saveButtonPosition();
@@ -323,6 +299,5 @@
         moveToTarget();
       }
     }, beatDuration);
-  </script>
-</body>
+  </script></body>
 </html>
