@@ -180,6 +180,7 @@ svg#player {
       rideToggle.textContent = rideEnabled ? 'Riding' : 'Ride';
       skateboard.style.display = rideEnabled ? 'block' : 'none';
       beatDuration = rideEnabled ? 150 : 600;
+      if (rideEnabled) grindSpeed = beatDuration * 0.25;
     });
 
     function updatePlayerPosition() {
@@ -225,7 +226,7 @@ svg#player {
         }
       }
       updatePlayerPosition();
-    }, beatDuration);
+    }, beatDuration * 0.25);
 
     gameCanvas.addEventListener('click', (e) => {
       const rect = gameCanvas.getBoundingClientRect();
