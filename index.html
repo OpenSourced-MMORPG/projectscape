@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OSRS-Style Game</title>
   <style>
     html, body {
@@ -72,11 +72,6 @@
       box-shadow: 0 0 0 3px green !important;
     }
 
-    #camera-toggle.drag-ready,
-    #camera-toggle.dragging {
-      box-shadow: 0 0 0 3px yellow !important;
-    }
-
     #hamburger {
       position: fixed;
       top: 10px;
@@ -96,7 +91,7 @@
       position: fixed;
       top: 50px;
       right: 10px;
-      width: 200px;
+      width: 220px;
       background: #111;
       color: white;
       padding: 10px;
@@ -106,10 +101,51 @@
       display: none;
     }
 
-    #settings-panel label {
+    .settings-category, .settings-group {
+      margin-bottom: 10px;
+    }
+
+    .settings-group {
+      display: none;
+    }
+
+    .settings-group.active {
       display: block;
-      margin: 8px 0 4px;
+    }
+
+    .settings-category button {
+      display: block;
+      width: 100%;
+      background: #222;
+      color: white;
+      border: none;
+      padding: 8px;
+      margin-bottom: 5px;
+      border-radius: 6px;
+      cursor: pointer;
       font-size: 14px;
+    }
+
+    label {
+      display: block;
+      margin: 6px 0 2px;
+      font-size: 13px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .slider-row span {
+      min-width: 32px;
+      font-size: 12px;
+      text-align: right;
     }
 
     #version {
@@ -132,19 +168,32 @@
     </div>
   </div>
 
-  <!-- UI Controls -->
   <button id="hamburger">☰</button>
   <div id="settings-panel">
-    <label>Camera Lock</label>
-    <button id="camera-lock-toggle">Unlock</button>
-    <label>Panning Speed</label>
-    <input type="range" id="panning-speed" min="1" max="50" value="10" />
-    <label>Zoom Speed</label>
-    <input type="range" id="zoom-speed" min="0.1" max="1" step="0.1" value="0.1" />
+    <div class="settings-category">
+      <button data-category="camera">Camera</button>
+      <!-- Future categories here -->
+    </div>
+    <div class="settings-group" id="camera-settings">
+      <label>Camera Lock</label>
+      <button id="camera-lock-toggle">Unlock</button>
+
+      <label>Panning Speed</label>
+      <div class="slider-row">
+        <input type="range" id="panning-speed" min="1" max="75" value="10" />
+        <span id="pan-speed-value">10</span>
+      </div>
+
+      <label>Zoom Speed</label>
+      <div class="slider-row">
+        <input type="range" id="zoom-speed" min="0.1" max="1" step="0.1" value="0.1" />
+        <span id="zoom-speed-value">0.1</span>
+      </div>
+    </div>
   </div>
 
   <button id="camera-toggle">Lock</button>
-  <div id="version">v1.6 – Hamburger + Settings</div>
+  <div id="version">v1.7 – Stay Center + Category Menu</div>
 
   <script>
     const tileSize = 40;
@@ -154,11 +203,14 @@
     const gameCanvas = document.getElementById('game-canvas');
     const playerSvg = document.getElementById('player');
     const cameraButton = document.getElementById('camera-toggle');
+
     const hamburger = document.getElementById('hamburger');
     const settingsPanel = document.getElementById('settings-panel');
     const cameraLockToggle = document.getElementById('camera-lock-toggle');
     const panSpeedSlider = document.getElementById('panning-speed');
     const zoomSpeedSlider = document.getElementById('zoom-speed');
+    const panSpeedValue = document.getElementById('pan-speed-value');
+    const zoomSpeedValue = document.getElementById('zoom-speed-value');
 
     let cols = 0, rows = 0;
     let playerCol = 5, playerRow = 5;
@@ -207,6 +259,10 @@
         const translateX = -px + offsetX;
         const translateY = -py + offsetY;
         gameCanvas.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
+
+        // Save this position when space is released
+        panX = translateX;
+        panY = translateY;
       } else {
         gameCanvas.style.transform = `scale(${scale}) translate(${panX}px, ${panY}px)`;
       }
@@ -263,20 +319,7 @@
       updateCameraLockState();
     }
 
-    // UI Events
-    hamburger.addEventListener('click', () => {
-      settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block';
-    });
-
-    cameraLockToggle.addEventListener('click', toggleCameraLock);
-    panSpeedSlider.addEventListener('input', () => {
-      panSpeed = parseInt(panSpeedSlider.value);
-    });
-
-    zoomSpeedSlider.addEventListener('input', () => {
-      zoomStep = parseFloat(zoomSpeedSlider.value);
-    });
-
+    // Input
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
       switch (e.key) {
@@ -285,7 +328,10 @@
         case 'ArrowLeft': movingLeft = true; break;
         case 'ArrowRight': movingRight = true; break;
         case 'y': toggleCameraLock(); break;
-        case ' ': spaceHeld = true; updateCameraLockState(); break;
+        case ' ':
+          spaceHeld = true;
+          updateCameraLockState();
+          break;
       }
     });
 
@@ -295,7 +341,12 @@
         case 'ArrowDown': movingDown = false; break;
         case 'ArrowLeft': movingLeft = false; break;
         case 'ArrowRight': movingRight = false; break;
-        case ' ': spaceHeld = false; updateCameraLockState(); break;
+        case ' ':
+          spaceHeld = false;
+          cameraLocked = false; // keep camera free
+          userToggledLock = false;
+          updateCameraLockState();
+          break;
       }
     });
 
@@ -323,6 +374,29 @@
     }, { passive: false });
 
     gameCanvas.addEventListener('click', setTargetFromClick);
+
+    // Hamburger & Camera Settings
+    hamburger.addEventListener('click', () => {
+      settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block';
+    });
+
+    document.querySelectorAll('[data-category]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.settings-group').forEach(group => group.classList.remove('active'));
+        const group = document.getElementById(`${btn.dataset.category}-settings`);
+        if (group) group.classList.add('active');
+      });
+    });
+
+    cameraLockToggle.addEventListener('click', toggleCameraLock);
+    panSpeedSlider.addEventListener('input', () => {
+      panSpeed = parseInt(panSpeedSlider.value);
+      panSpeedValue.textContent = panSpeed;
+    });
+    zoomSpeedSlider.addEventListener('input', () => {
+      zoomStep = parseFloat(zoomSpeedSlider.value);
+      zoomSpeedValue.textContent = zoomStep;
+    });
 
     setInterval(() => {
       if (movingUp || movingDown || movingLeft || movingRight) movePlayer();
