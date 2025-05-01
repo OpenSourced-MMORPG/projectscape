@@ -110,7 +110,7 @@
   </div>
   <button id="camera-toggle">Lock</button>
   <button id="skate-toggle">Skate</button>
-  <div id="version">v1.7 – Skateboard Added</div>
+  <div id="version">v1.8 – Skateboard Centered & Aligned</div>
   <script>
     const tileSize = 40;
     const beatDuration = 600;
@@ -177,8 +177,9 @@
       playerSvg.style.top = py + 'px';
 
       skateboard.style.left = px + 'px';
-      skateboard.style.top = py + 'px';
-      skateboard.style.transform = `rotate(${lastDir}rad)`;
+      skateboard.style.top = (py - 40) + 'px'; // Center skateboard under player
+      const angleDeg = (lastDir * 180 / Math.PI) + 90;
+      skateboard.style.transform = `rotate(${angleDeg}deg)`;
 
       if (cameraLocked) {
         const offsetX = (viewport.clientWidth / 2 - tileSize / 2) / scale;
@@ -261,14 +262,8 @@
         case 'ArrowDown': movingDown = true; break;
         case 'ArrowLeft': movingLeft = true; break;
         case 'ArrowRight': movingRight = true; break;
-        case 'y':
-          userToggledLock = !userToggledLock;
-          updateCameraLockState();
-          break;
-        case ' ':
-          spaceHeld = true;
-          updateCameraLockState();
-          break;
+        case 'y': userToggledLock = !userToggledLock; updateCameraLockState(); break;
+        case ' ': spaceHeld = true; updateCameraLockState(); break;
       }
     });
 
@@ -278,10 +273,7 @@
         case 'ArrowDown': movingDown = false; break;
         case 'ArrowLeft': movingLeft = false; break;
         case 'ArrowRight': movingRight = false; break;
-        case ' ':
-          spaceHeld = false;
-          updateCameraLockState();
-          break;
+        case ' ': spaceHeld = false; updateCameraLockState(); break;
       }
     });
 
@@ -290,11 +282,7 @@
       updatePlayerPosition();
       cameraButton.classList.toggle('active', userToggledLock);
       cameraButton.textContent = userToggledLock ? 'Lock' : 'Unlock';
-      if (spaceHeld) {
-        cameraButton.classList.add('space-outline');
-      } else {
-        cameraButton.classList.remove('space-outline');
-      }
+      cameraButton.classList.toggle('space-outline', spaceHeld);
     }
 
     function toggleCameraLock() {
