@@ -28,7 +28,7 @@
       flex-wrap: wrap;
       transform-origin: top left;
       touch-action: none;
-      transition: transform 0.2s ease;
+      z-index: 0;
     }
 
     .tile {
@@ -166,11 +166,7 @@
 </head>
 <body>
   <div id="viewport">
-    <div id="game-canvas">
-      <svg id="player">
-        <circle cx="20" cy="20" r="15" fill="lime" />
-      </svg>
-    </div>
+    <div id="game-canvas"></div>
   </div>
 
   <button id="hamburger">☰</button>
@@ -197,7 +193,7 @@
   </div>
 
   <button id="camera-toggle">Lock</button>
-  <div id="version">v1.8 – Drag + Display Fix</div>
+  <div id="version">v1.9 – Zoom + Click Fix</div>
 
   <script>
     const tileSize = 40;
@@ -205,7 +201,6 @@
 
     const viewport = document.getElementById('viewport');
     const gameCanvas = document.getElementById('game-canvas');
-    const playerSvg = document.getElementById('player');
     const cameraButton = document.getElementById('camera-toggle');
 
     const hamburger = document.getElementById('hamburger');
@@ -216,7 +211,6 @@
     const panSpeedValue = document.getElementById('pan-speed-value');
     const zoomSpeedValue = document.getElementById('zoom-speed-value');
 
-    let cols = 0, rows = 0;
     let playerCol = 5, playerRow = 5;
     let targetCol = 5, targetRow = 5;
 
@@ -233,15 +227,19 @@
     let panX = 0, panY = 0;
     let mouseX = 0, mouseY = 0;
 
-    // Drag vars
-    let dragTimeout = null, isDragging = false, dragCanceled = false, offsetX = 0, offsetY = 0;
+    const playerSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    playerSvg.setAttribute("id", "player");
+    playerSvg.setAttribute("width", "40");
+    playerSvg.setAttribute("height", "40");
+    playerSvg.innerHTML = `<circle cx="20" cy="20" r="15" fill="lime" />`;
+    gameCanvas.appendChild(playerSvg);
 
     function createGrid() {
-      gameCanvas.innerHTML = '';
+      gameCanvas.innerHTML = "";
       const width = Math.floor(window.innerWidth / tileSize) * tileSize;
       const height = Math.floor(window.innerHeight / tileSize) * tileSize;
-      cols = width / tileSize;
-      rows = height / tileSize;
+      const cols = width / tileSize;
+      const rows = height / tileSize;
 
       for (let i = 0; i < cols * rows; i++) {
         const tile = document.createElement('div');
@@ -266,7 +264,6 @@
         const translateX = -px + offsetX;
         const translateY = -py + offsetY;
         gameCanvas.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
-
         panX = translateX;
         panY = translateY;
       } else {
@@ -284,47 +281,47 @@
     }
 
     function toggleCameraLock() {
-      if (isDragging) return;
       userToggledLock = !userToggledLock;
       updateCameraLockState();
     }
 
-    function setTargetFromClick(e) {
+    gameCanvas.addEventListener('click', (e) => {
       const rect = gameCanvas.getBoundingClientRect();
-      const clickX = (e.clientX - rect.left) / scale;
-      const clickY = (e.clientY - rect.top) / scale;
+      const clickX = (e.clientX - rect.left) / scale - panX;
+      const clickY = (e.clientY - rect.top) / scale - panY;
       targetCol = Math.floor(clickX / tileSize);
       targetRow = Math.floor(clickY / tileSize);
-      movingUp = movingDown = movingLeft = movingRight = false;
-    }
+    });
 
-    function movePlayer() {
-      let newCol = playerCol;
-      let newRow = playerRow;
-      if (movingUp) newRow--;
-      if (movingDown) newRow++;
-      if (movingLeft) newCol--;
-      if (movingRight) newRow++;
-      if (newCol >= 0 && newCol < cols && newRow >= 0 && newRow < rows) {
-        playerCol = newCol;
-        playerRow = newRow;
-        targetCol = playerCol;
-        targetRow = playerRow;
-        updatePlayerPosition();
-      }
-    }
+    window.addEventListener('keydown', (e) => {
+      if (e.repeat) return;
+      if (e.key === ' ') {
+        spaceHeld = true;
+        updateCameraLockState();
+      } else if (e.key === 'y') {
+        toggleCameraLock();
+      } else if (e.key === 'ArrowUp') movingUp = true;
+      else if (e.key === 'ArrowDown') movingDown = true;
+      else if (e.key === 'ArrowLeft') movingLeft = true;
+      else if (e.key === 'ArrowRight') movingRight = true;
+    });
 
-    function moveToTarget() {
-      if (playerCol < targetCol) playerCol++;
-      else if (playerCol > targetCol) playerCol--;
-      if (playerRow < targetRow) playerRow++;
-      else if (playerRow > targetRow) playerRow--;
-      updatePlayerPosition();
-    }
+    window.addEventListener('keyup', (e) => {
+      if (e.key === ' ') {
+        spaceHeld = false;
+        cameraLocked = false;
+        userToggledLock = false;
+        updateCameraLockState();
+      } else if (e.key === 'ArrowUp') movingUp = false;
+      else if (e.key === 'ArrowDown') movingDown = false;
+      else if (e.key === 'ArrowLeft') movingLeft = false;
+      else if (e.key === 'ArrowRight') movingRight = false;
+    });
 
-    function applyZoom() {
-      updatePlayerPosition();
-    }
+    window.addEventListener('mousemove', e => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    });
 
     function edgePanLoop() {
       if (!cameraLocked && !spaceHeld) {
@@ -337,129 +334,54 @@
       requestAnimationFrame(edgePanLoop);
     }
 
-    // Input & Events
-    window.addEventListener('keydown', (e) => {
-      if (e.repeat) return;
-      switch (e.key) {
-        case 'ArrowUp': movingUp = true; break;
-        case 'ArrowDown': movingDown = true; break;
-        case 'ArrowLeft': movingLeft = true; break;
-        case 'ArrowRight': movingRight = true; break;
-        case 'y': toggleCameraLock(); break;
-        case ' ':
-          spaceHeld = true;
-          updateCameraLockState();
-          break;
-      }
-    });
-
-    window.addEventListener('keyup', (e) => {
-      switch (e.key) {
-        case 'ArrowUp': movingUp = false; break;
-        case 'ArrowDown': movingDown = false; break;
-        case 'ArrowLeft': movingLeft = false; break;
-        case 'ArrowRight': movingRight = false; break;
-        case ' ':
-          spaceHeld = false;
-          cameraLocked = false;
-          userToggledLock = false;
-          updateCameraLockState();
-          break;
-      }
-    });
-
-    window.addEventListener('mousemove', (e) => {
-      mouseX = e.clientX;
-      mouseY = e.clientY;
-    });
-
-    window.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      scale += (e.deltaY < 0 ? zoomStep : -zoomStep);
-      scale = Math.min(maxScale, Math.max(minScale, scale));
-      applyZoom();
-    }, { passive: false });
-
-    gameCanvas.addEventListener('click', setTargetFromClick);
-
-    // UI Events
     hamburger.addEventListener('click', () => {
       settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block';
     });
 
     document.querySelectorAll('[data-category]').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.settings-group').forEach(group => group.classList.remove('active'));
+        document.querySelectorAll('.settings-group').forEach(g => g.classList.remove('active'));
         const group = document.getElementById(`${btn.dataset.category}-settings`);
         if (group) group.classList.add('active');
       });
     });
 
     cameraLockToggle.addEventListener('click', toggleCameraLock);
-
     panSpeedSlider.addEventListener('input', () => {
       panSpeed = parseInt(panSpeedSlider.value);
       panSpeedValue.textContent = panSpeed;
     });
-
     zoomSpeedSlider.addEventListener('input', () => {
       zoomStep = parseFloat(zoomSpeedSlider.value);
       zoomSpeedValue.textContent = Math.round(zoomStep * 100);
     });
 
-    // Dragging logic
-    cameraButton.addEventListener('mousedown', e => {
-      dragCanceled = false;
-      const isCtrl = e.ctrlKey;
-      offsetX = e.clientX - cameraButton.offsetLeft;
-      offsetY = e.clientY - cameraButton.offsetTop;
-      if (isCtrl) {
-        isDragging = true;
-        cameraButton.classList.add('drag-ready', 'dragging');
-      } else {
-        dragTimeout = setTimeout(() => {
-          isDragging = true;
-          cameraButton.classList.add('drag-ready', 'dragging');
-        }, 1000);
+    window.addEventListener('wheel', e => {
+      e.preventDefault();
+      scale += (e.deltaY < 0 ? zoomStep : -zoomStep);
+      scale = Math.min(maxScale, Math.max(minScale, scale));
+      updatePlayerPosition();
+    }, { passive: false });
+
+    setInterval(() => {
+      if (movingUp || movingDown || movingLeft || movingRight) {
+        if (movingUp) playerRow--;
+        if (movingDown) playerRow++;
+        if (movingLeft) playerCol--;
+        if (movingRight) playerCol++;
+        updatePlayerPosition();
+      } else if (playerCol !== targetCol || playerRow !== targetRow) {
+        if (playerCol < targetCol) playerCol++;
+        else if (playerCol > targetCol) playerCol--;
+        if (playerRow < targetRow) playerRow++;
+        else if (playerRow > targetRow) playerRow--;
+        updatePlayerPosition();
       }
-    });
+    }, beatDuration);
 
-    window.addEventListener('mousemove', e => {
-      if (!isDragging) return;
-      dragCanceled = true;
-      cameraButton.style.left = `${e.clientX - offsetX}px`;
-      cameraButton.style.top = `${e.clientY - offsetY}px`;
-      cameraButton.style.right = 'auto';
-      cameraButton.style.bottom = 'auto';
-    });
-
-    window.addEventListener('mouseup', () => {
-      clearTimeout(dragTimeout);
-      if (isDragging) {
-        isDragging = false;
-        cameraButton.classList.remove('drag-ready', 'dragging');
-        localStorage.setItem('cameraBtnPos', JSON.stringify({
-          left: cameraButton.style.left,
-          top: cameraButton.style.top
-        }));
-      }
-    });
-
-    cameraButton.addEventListener('click', e => {
-      if (dragCanceled) {
-        e.stopImmediatePropagation();
-        e.preventDefault();
-        return;
-      }
-      toggleCameraLock();
-    });
-
-    // Init
     createGrid();
     updatePlayerPosition();
     edgePanLoop();
-    panSpeedValue.textContent = panSpeed;
-    zoomSpeedValue.textContent = Math.round(zoomStep * 100);
   </script>
 </body>
 </html>
