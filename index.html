@@ -34,9 +34,6 @@
       box-sizing: border-box;
       border: 1px solid #111;
     }
-    .rail {
-      background: #444;
-    }
     svg#player {
       position: absolute;
       width: 40px;
@@ -113,118 +110,195 @@
   </div>
   <button id="camera-toggle">Lock</button>
   <button id="skate-toggle">Skate</button>
-  <div id="version">v2.0 – Zoom + Grind Rail</div>
+  <div id="version">v1.9 – Pinch Zoom Centered</div>
   <script>
     const tileSize = 40;
     const beatDuration = 600;
+
+    const viewport = document.getElementById('viewport');
     const gameCanvas = document.getElementById('game-canvas');
     const playerSvg = document.getElementById('player');
     const skateboard = document.getElementById('skateboard');
     const cameraButton = document.getElementById('camera-toggle');
     const skateButton = document.getElementById('skate-toggle');
-    const viewport = document.getElementById('viewport');
 
-    let playerCol = 5, playerRow = 5, targetCol = 5, targetRow = 5;
-    let movingUp = false, movingDown = false, movingLeft = false, movingRight = false;
-    let scale = 1, minScale = 0.5, maxScale = 2.5;
-    let cameraLocked = true, userToggledLock = false, spaceHeld = false;
-    let isSkating = false, lastDir = 0;
-    let cols = 0, rows = 0;
-    let onGrindRail = false, grindDirection = { dx: 1, dy: 0 };
+    let cols = 0;
+    let rows = 0;
+    let playerCol = 5;
+    let playerRow = 5;
+    let targetCol = 5;
+    let targetRow = 5;
+
+    let movingUp = false;
+    let movingDown = false;
+    let movingLeft = false;
+    let movingRight = false;
+
+    let scale = 1;
+    const minScale = 0.5;
+    const maxScale = 2.5;
+
+    let cameraLocked = true;
+    let userToggledLock = false;
+    let spaceHeld = false;
+    let isSkating = false;
+    let lastDir = 0;
+
+    let initialPinchDistance = null;
+    let lastScale = scale;
+
+    const savedPos = JSON.parse(localStorage.getItem('cameraBtnPos'));
+    if (savedPos) {
+      cameraButton.style.left = savedPos.left;
+      cameraButton.style.top = savedPos.top;
+      cameraButton.style.right = 'auto';
+      cameraButton.style.bottom = 'auto';
+    }
 
     function createGrid() {
-      [...gameCanvas.querySelectorAll('.tile')].forEach(t => t.remove());
-      cols = Math.floor(window.innerWidth / tileSize);
-      rows = Math.floor(window.innerHeight / tileSize);
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const tile = document.createElement('div');
-          tile.className = 'tile';
-          if (r === 8 && c >= 3 && c <= 15) tile.classList.add('rail');
-          tile.dataset.col = c;
-          tile.dataset.row = r;
-          tile.addEventListener('click', () => {
-            if (tile.classList.contains('rail')) {
-              playerCol = c;
-              playerRow = r;
-              onGrindRail = true;
-              grindDirection = { dx: 1, dy: 0 }; // move right
-            } else {
-              onGrindRail = false;
-              targetCol = c;
-              targetRow = r;
-            }
-          });
-          gameCanvas.appendChild(tile);
-        }
+      gameCanvas.innerHTML = '';
+      const width = Math.floor(window.innerWidth / tileSize) * tileSize;
+      const height = Math.floor(window.innerHeight / tileSize) * tileSize;
+      cols = width / tileSize;
+      rows = height / tileSize;
+      for (let i = 0; i < cols * rows; i++) {
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+        gameCanvas.appendChild(tile);
       }
+      gameCanvas.appendChild(skateboard);
+      gameCanvas.appendChild(playerSvg);
+      gameCanvas.style.width = `${cols * tileSize}px`;
+      gameCanvas.style.height = `${rows * tileSize}px`;
     }
 
     function updatePlayerPosition() {
       const px = playerCol * tileSize;
       const py = playerRow * tileSize;
+
       playerSvg.style.left = px + 'px';
       playerSvg.style.top = py + 'px';
+
       skateboard.style.left = px + 'px';
       skateboard.style.top = (py - 40) + 'px';
       const angleDeg = (lastDir * 180 / Math.PI) + 90;
       skateboard.style.transform = `rotate(${angleDeg}deg)`;
+
       if (cameraLocked) {
         const offsetX = (viewport.clientWidth / 2 - tileSize / 2) / scale;
         const offsetY = (viewport.clientHeight / 2 - tileSize / 2) / scale;
-        gameCanvas.style.transform = `scale(${scale}) translate(${-px + offsetX}px, ${-py + offsetY}px)`;
+        const translateX = -px + offsetX;
+        const translateY = -py + offsetY;
+        gameCanvas.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
+      }
+    }
+
+    function movePlayer() {
+      let newCol = playerCol;
+      let newRow = playerRow;
+      if (movingUp) newRow--;
+      if (movingDown) newRow++;
+      if (movingLeft) newCol--;
+      if (movingRight) newCol++;
+      if (newCol >= 0 && newCol < cols && newRow >= 0 && newRow < rows) {
+        playerCol = newCol;
+        playerRow = newRow;
+        targetCol = playerCol;
+        targetRow = playerRow;
+        updatePlayerPosition();
       }
     }
 
     function moveToTarget() {
-      if (onGrindRail) {
-        playerCol += grindDirection.dx * 6;
-        playerRow += grindDirection.dy * 6;
-        updatePlayerPosition();
-        return;
-      }
       let dx = targetCol - playerCol;
       let dy = targetRow - playerRow;
       if (dx !== 0 || dy !== 0) {
-        lastDir = Math.atan2(dy, dx);
+        const angle = Math.atan2(dy, dx);
+        lastDir = angle;
         const step = isSkating ? 3 : 1;
-        playerCol += Math.sign(dx) * Math.min(step, Math.abs(dx));
-        playerRow += Math.sign(dy) * Math.min(step, Math.abs(dy));
-        updatePlayerPosition();
+        const newCol = playerCol + Math.sign(dx) * Math.min(step, Math.abs(dx));
+        const newRow = playerRow + Math.sign(dy) * Math.min(step, Math.abs(dy));
+        if (newCol >= 0 && newCol < cols && newRow >= 0 && newRow < rows) {
+          playerCol = newCol;
+          playerRow = newRow;
+          updatePlayerPosition();
+        }
       }
+    }
+
+    function setTargetFromClick(e) {
+      const rect = gameCanvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) / scale;
+      const clickY = (e.clientY - rect.top) / scale;
+      targetCol = Math.floor(clickX / tileSize);
+      targetRow = Math.floor(clickY / tileSize);
+      movingUp = movingDown = movingLeft = movingRight = false;
     }
 
     function applyZoom() {
       updatePlayerPosition();
     }
 
-    let initialDistance = null;
-    gameCanvas.addEventListener('touchstart', (e) => {
+    window.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomIntensity = 0.1;
+      scale += (e.deltaY < 0 ? zoomIntensity : -zoomIntensity);
+      scale = Math.min(maxScale, Math.max(minScale, scale));
+      applyZoom();
+    }, { passive: false });
+
+    viewport.addEventListener('touchstart', (e) => {
       if (e.touches.length === 2) {
-        initialDistance = getTouchDistance(e.touches);
-      }
-    });
-    gameCanvas.addEventListener('touchmove', (e) => {
-      if (e.touches.length === 2 && initialDistance) {
-        e.preventDefault();
-        const newDistance = getTouchDistance(e.touches);
-        const zoomFactor = newDistance / initialDistance;
-        scale = Math.min(maxScale, Math.max(minScale, scale * zoomFactor));
-        applyZoom();
-        initialDistance = newDistance;
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        initialPinchDistance = Math.hypot(dx, dy);
+        lastScale = scale;
       }
     }, { passive: false });
-    gameCanvas.addEventListener('touchend', (e) => {
-      if (e.touches.length < 2) initialDistance = null;
-    });
-    function getTouchDistance(touches) {
-      const dx = touches[0].clientX - touches[1].clientX;
-      const dy = touches[0].clientY - touches[1].clientY;
-      return Math.hypot(dx, dy);
-    }
 
-    window.addEventListener('keydown', e => {
-      onGrindRail = false;
+    viewport.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2 && initialPinchDistance !== null) {
+        e.preventDefault();
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const currentDistance = Math.hypot(dx, dy);
+        const scaleChange = currentDistance / initialPinchDistance;
+        const newScale = Math.min(maxScale, Math.max(minScale, lastScale * scaleChange));
+
+        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+        const rect = gameCanvas.getBoundingClientRect();
+        const canvasX = (midX - rect.left) / scale;
+        const canvasY = (midY - rect.top) / scale;
+
+        scale = newScale;
+
+        const newOffsetX = (viewport.clientWidth / 2 - canvasX * scale);
+        const newOffsetY = (viewport.clientHeight / 2 - canvasY * scale);
+        gameCanvas.style.transform = `scale(${scale}) translate(${newOffsetX / scale}px, ${newOffsetY / scale}px)`;
+      }
+    }, { passive: false });
+
+    viewport.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) {
+        initialPinchDistance = null;
+      }
+    }, { passive: false });
+
+    window.addEventListener('resize', () => {
+      const oldCol = playerCol;
+      const oldRow = playerRow;
+      createGrid();
+      playerCol = Math.min(oldCol, cols - 1);
+      playerRow = Math.min(oldRow, rows - 1);
+      targetCol = playerCol;
+      targetRow = playerRow;
+      updatePlayerPosition();
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.repeat) return;
       switch (e.key) {
         case 'ArrowUp': movingUp = true; break;
         case 'ArrowDown': movingDown = true; break;
@@ -234,7 +308,8 @@
         case ' ': spaceHeld = true; updateCameraLockState(); break;
       }
     });
-    window.addEventListener('keyup', e => {
+
+    window.addEventListener('keyup', (e) => {
       switch (e.key) {
         case 'ArrowUp': movingUp = false; break;
         case 'ArrowDown': movingDown = false; break;
@@ -248,8 +323,13 @@
       cameraLocked = spaceHeld || userToggledLock;
       updatePlayerPosition();
       cameraButton.classList.toggle('active', userToggledLock);
-      cameraButton.classList.toggle('space-outline', spaceHeld);
       cameraButton.textContent = userToggledLock ? 'Lock' : 'Unlock';
+      cameraButton.classList.toggle('space-outline', spaceHeld);
+    }
+
+    function toggleCameraLock() {
+      userToggledLock = !userToggledLock;
+      updateCameraLockState();
     }
 
     function toggleSkateboard() {
@@ -259,20 +339,71 @@
       skateboard.style.display = isSkating ? 'block' : 'none';
     }
 
+    let dragTimeout = null;
+    let isDragging = false;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    function startDragCheck(e) {
+      const isCtrl = e.ctrlKey || (e.touches && e.touches[0].ctrlKey);
+      const startX = (e.touches ? e.touches[0].clientX : e.clientX);
+      const startY = (e.touches ? e.touches[0].clientY : e.clientY);
+      offsetX = startX - cameraButton.offsetLeft;
+      offsetY = startY - cameraButton.offsetTop;
+      if (isCtrl) {
+        isDragging = true;
+        cameraButton.classList.add('drag-ready', 'dragging');
+      } else {
+        dragTimeout = setTimeout(() => {
+          isDragging = true;
+          cameraButton.classList.add('drag-ready', 'dragging');
+        }, 1000);
+      }
+    }
+
+    function doDrag(e) {
+      if (!isDragging) return;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      cameraButton.style.left = (clientX - offsetX) + 'px';
+      cameraButton.style.top = (clientY - offsetY) + 'px';
+      cameraButton.style.right = 'auto';
+      cameraButton.style.bottom = 'auto';
+    }
+
+    function stopDrag() {
+      clearTimeout(dragTimeout);
+      isDragging = false;
+      cameraButton.classList.remove('drag-ready', 'dragging');
+      localStorage.setItem('cameraBtnPos', JSON.stringify({
+        left: cameraButton.style.left,
+        top: cameraButton.style.top
+      }));
+    }
+
+    cameraButton.addEventListener('click', (e) => {
+      if (e.ctrlKey || isDragging) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        return;
+      }
+      toggleCameraLock();
+    }, true);
+
     skateButton.addEventListener('click', toggleSkateboard);
-    window.addEventListener('resize', () => {
-      createGrid();
-      updatePlayerPosition();
-    });
+    cameraButton.addEventListener('mousedown', startDragCheck);
+    cameraButton.addEventListener('touchstart', startDragCheck, { passive: false });
+    window.addEventListener('mousemove', doDrag);
+    window.addEventListener('touchmove', doDrag, { passive: false });
+    window.addEventListener('mouseup', stopDrag);
+    window.addEventListener('touchend', stopDrag);
+
+    gameCanvas.addEventListener('click', setTargetFromClick);
 
     setInterval(() => {
       if (movingUp || movingDown || movingLeft || movingRight) {
-        playerRow += movingDown - movingUp;
-        playerCol += movingRight - movingLeft;
-        targetCol = playerCol;
-        targetRow = playerRow;
-        updatePlayerPosition();
-      } else if (playerCol !== targetCol || playerRow !== targetRow || onGrindRail) {
+        movePlayer();
+      } else if (playerCol !== targetCol || playerRow !== targetRow) {
         moveToTarget();
       }
     }, beatDuration);
