@@ -110,7 +110,7 @@
   </div>
   <button id="camera-toggle">Lock</button>
   <button id="skate-toggle">Skate</button>
-  <div id="version">v1.8 – Skateboard Centered & Aligned</div>
+  <div id="version">v1.9 – Zoom Fix</div>
   <script>
     const tileSize = 40;
     const beatDuration = 600;
@@ -153,7 +153,7 @@
     }
 
     function createGrid() {
-      gameCanvas.innerHTML = '';
+      [...gameCanvas.querySelectorAll('.tile')].forEach(tile => tile.remove());
       const width = Math.floor(window.innerWidth / tileSize) * tileSize;
       const height = Math.floor(window.innerHeight / tileSize) * tileSize;
       cols = width / tileSize;
@@ -163,10 +163,6 @@
         tile.className = 'tile';
         gameCanvas.appendChild(tile);
       }
-      gameCanvas.appendChild(skateboard);
-      gameCanvas.appendChild(playerSvg);
-      gameCanvas.style.width = `${cols * tileSize}px`;
-      gameCanvas.style.height = `${rows * tileSize}px`;
     }
 
     function updatePlayerPosition() {
@@ -177,7 +173,7 @@
       playerSvg.style.top = py + 'px';
 
       skateboard.style.left = px + 'px';
-      skateboard.style.top = (py - 40) + 'px'; // Center skateboard under player
+      skateboard.style.top = (py - 40) + 'px';
       const angleDeg = (lastDir * 180 / Math.PI) + 90;
       skateboard.style.transform = `rotate(${angleDeg}deg)`;
 
