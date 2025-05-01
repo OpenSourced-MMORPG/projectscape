@@ -92,7 +92,7 @@
     </div>
   </div>
   <button id="camera-toggle">Lock</button>
-  <div id="version">v1.3 – Space Lock + Ctrl Drag Fix</div>
+  <div id="version">v1.4 – Ctrl Drag Lock Fix + Space Click Restore</div>
 
   <script>
     const tileSize = 40;
@@ -195,7 +195,6 @@
     }
 
     function setTargetFromClick(e) {
-      if (spaceHeld) return;
       const rect = gameCanvas.getBoundingClientRect();
       const clickX = (e.clientX - rect.left) / scale;
       const clickY = (e.clientY - rect.top) / scale;
@@ -293,11 +292,6 @@
     function updateCameraLockState() {
       cameraLocked = spaceHeld || userToggledLock;
       updatePlayerPosition();
-      if (spaceHeld) {
-        cameraButton.classList.add('drag-ready');
-      } else {
-        cameraButton.classList.remove('drag-ready');
-      }
       cameraButton.classList.toggle('active', userToggledLock);
       cameraButton.textContent = userToggledLock ? 'Lock' : 'Unlock';
     }
@@ -351,12 +345,14 @@
       }));
     }
 
-    // Block accidental clicks while dragging
+    // Block accidental toggle while dragging or holding Ctrl
     cameraButton.addEventListener('click', (e) => {
-      if (isDragging) {
+      if (e.ctrlKey || isDragging) {
         e.stopImmediatePropagation();
         e.preventDefault();
+        return;
       }
+      toggleCameraLock();
     }, true);
 
     cameraButton.addEventListener('mousedown', startDragCheck);
@@ -366,7 +362,6 @@
     window.addEventListener('mouseup', stopDrag);
     window.addEventListener('touchend', stopDrag);
 
-    cameraButton.addEventListener('click', toggleCameraLock);
     gameCanvas.addEventListener('click', setTargetFromClick);
 
     setInterval(() => {
