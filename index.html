@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>OSRS-Style Game</title>
   <style>
@@ -77,6 +77,41 @@
       box-shadow: 0 0 0 3px yellow !important;
     }
 
+    #hamburger {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      width: 30px;
+      height: 30px;
+      z-index: 1000;
+      background: #333;
+      color: white;
+      font-size: 24px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    #settings-panel {
+      position: fixed;
+      top: 50px;
+      right: 10px;
+      width: 200px;
+      background: #111;
+      color: white;
+      padding: 10px;
+      z-index: 999;
+      border-radius: 8px;
+      box-shadow: 0 0 10px #000;
+      display: none;
+    }
+
+    #settings-panel label {
+      display: block;
+      margin: 8px 0 4px;
+      font-size: 14px;
+    }
+
     #version {
       position: fixed;
       top: 5px;
@@ -96,41 +131,51 @@
       </svg>
     </div>
   </div>
+
+  <!-- UI Controls -->
+  <button id="hamburger">☰</button>
+  <div id="settings-panel">
+    <label>Camera Lock</label>
+    <button id="camera-lock-toggle">Unlock</button>
+    <label>Panning Speed</label>
+    <input type="range" id="panning-speed" min="1" max="50" value="10" />
+    <label>Zoom Speed</label>
+    <input type="range" id="zoom-speed" min="0.1" max="1" step="0.1" value="0.1" />
+  </div>
+
   <button id="camera-toggle">Lock</button>
-  <div id="version">v1.5 – Final Fixes</div>
+  <div id="version">v1.6 – Hamburger + Settings</div>
 
   <script>
     const tileSize = 40;
     const beatDuration = 600;
-    const edgeSize = 20;
-    const panSpeed = 10;
 
     const viewport = document.getElementById('viewport');
     const gameCanvas = document.getElementById('game-canvas');
     const playerSvg = document.getElementById('player');
     const cameraButton = document.getElementById('camera-toggle');
+    const hamburger = document.getElementById('hamburger');
+    const settingsPanel = document.getElementById('settings-panel');
+    const cameraLockToggle = document.getElementById('camera-lock-toggle');
+    const panSpeedSlider = document.getElementById('panning-speed');
+    const zoomSpeedSlider = document.getElementById('zoom-speed');
 
     let cols = 0, rows = 0;
     let playerCol = 5, playerRow = 5;
     let targetCol = 5, targetRow = 5;
 
     let movingUp = false, movingDown = false, movingLeft = false, movingRight = false;
-    let scale = 1, minScale = 0.5, maxScale = 2.5;
-    let cameraLocked = true, userToggledLock = true, spaceHeld = false;
+    let scale = 1;
+    let zoomStep = parseFloat(zoomSpeedSlider.value);
+    let panSpeed = parseInt(panSpeedSlider.value);
+    const minScale = 0.5, maxScale = 2.5;
+
+    let cameraLocked = true;
+    let userToggledLock = true;
+    let spaceHeld = false;
 
     let panX = 0, panY = 0;
     let mouseX = 0, mouseY = 0;
-
-    let dragTimeout = null, isDragging = false, offsetX = 0, offsetY = 0, dragCanceled = false;
-
-    // Restore button position
-    const savedPos = JSON.parse(localStorage.getItem('cameraBtnPos'));
-    if (savedPos) {
-      cameraButton.style.left = savedPos.left;
-      cameraButton.style.top = savedPos.top;
-      cameraButton.style.right = 'auto';
-      cameraButton.style.bottom = 'auto';
-    }
 
     function createGrid() {
       gameCanvas.innerHTML = '';
@@ -167,6 +212,15 @@
       }
     }
 
+    function setTargetFromClick(e) {
+      const rect = gameCanvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) / scale;
+      const clickY = (e.clientY - rect.top) / scale;
+      targetCol = Math.floor(clickX / tileSize);
+      targetRow = Math.floor(clickY / tileSize);
+      movingUp = movingDown = movingLeft = movingRight = false;
+    }
+
     function movePlayer() {
       let newCol = playerCol;
       let newRow = playerRow;
@@ -195,71 +249,34 @@
       updatePlayerPosition();
     }
 
-    function setTargetFromClick(e) {
-      const rect = gameCanvas.getBoundingClientRect();
-      const clickX = (e.clientX - rect.left) / scale;
-      const clickY = (e.clientY - rect.top) / scale;
-      targetCol = Math.floor(clickX / tileSize);
-      targetRow = Math.floor(clickY / tileSize);
-      movingUp = movingDown = movingLeft = movingRight = false;
-    }
-
     function updateCameraLockState() {
       cameraLocked = spaceHeld || userToggledLock;
       updatePlayerPosition();
       cameraButton.classList.toggle('space-lock', spaceHeld);
       cameraButton.classList.toggle('active', userToggledLock);
       cameraButton.textContent = userToggledLock ? 'Lock' : 'Unlock';
+      cameraLockToggle.textContent = userToggledLock ? 'Unlock' : 'Lock';
     }
 
     function toggleCameraLock() {
-      if (isDragging || dragCanceled) return;
       userToggledLock = !userToggledLock;
       updateCameraLockState();
     }
 
-    // Drag logic
-    function startDragCheck(e) {
-      dragCanceled = false;
-      const isCtrl = e.ctrlKey || (e.touches && e.touches[0].ctrlKey);
-      const startX = (e.touches ? e.touches[0].clientX : e.clientX);
-      const startY = (e.touches ? e.touches[0].clientY : e.clientY);
-      offsetX = startX - cameraButton.offsetLeft;
-      offsetY = startY - cameraButton.offsetTop;
+    // UI Events
+    hamburger.addEventListener('click', () => {
+      settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block';
+    });
 
-      if (isCtrl) {
-        isDragging = true;
-        cameraButton.classList.add('drag-ready', 'dragging');
-      } else {
-        dragTimeout = setTimeout(() => {
-          isDragging = true;
-          cameraButton.classList.add('drag-ready', 'dragging');
-        }, 1000);
-      }
-    }
+    cameraLockToggle.addEventListener('click', toggleCameraLock);
+    panSpeedSlider.addEventListener('input', () => {
+      panSpeed = parseInt(panSpeedSlider.value);
+    });
 
-    function doDrag(e) {
-      if (!isDragging) return;
-      dragCanceled = true;
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      cameraButton.style.left = (clientX - offsetX) + 'px';
-      cameraButton.style.top = (clientY - offsetY) + 'px';
-      cameraButton.style.right = 'auto';
-      cameraButton.style.bottom = 'auto';
-    }
+    zoomSpeedSlider.addEventListener('input', () => {
+      zoomStep = parseFloat(zoomSpeedSlider.value);
+    });
 
-    function stopDrag() {
-      clearTimeout(dragTimeout);
-      isDragging = false;
-      cameraButton.classList.remove('drag-ready', 'dragging');
-      localStorage.setItem('cameraBtnPos', JSON.stringify({
-        left: cameraButton.style.left,
-        top: cameraButton.style.top
-      }));
-    }
-
-    // Input
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
       switch (e.key) {
@@ -287,39 +304,25 @@
       mouseY = e.clientY;
     });
 
-    // Panning loop
     function edgePanLoop() {
       if (!cameraLocked && !spaceHeld) {
-        if (mouseX < edgeSize) panX += panSpeed;
-        if (mouseX > window.innerWidth - edgeSize) panX -= panSpeed;
-        if (mouseY < edgeSize) panY += panSpeed;
-        if (mouseY > window.innerHeight - edgeSize) panY -= panSpeed;
+        if (mouseX < 20) panX += panSpeed;
+        if (mouseX > window.innerWidth - 20) panX -= panSpeed;
+        if (mouseY < 20) panY += panSpeed;
+        if (mouseY > window.innerHeight - 20) panY -= panSpeed;
         updatePlayerPosition();
       }
       requestAnimationFrame(edgePanLoop);
     }
 
-    // Events
-    cameraButton.addEventListener('mousedown', startDragCheck);
-    cameraButton.addEventListener('touchstart', startDragCheck, { passive: false });
-    window.addEventListener('mousemove', doDrag);
-    window.addEventListener('touchmove', doDrag, { passive: false });
-    window.addEventListener('mouseup', stopDrag);
-    window.addEventListener('touchend', stopDrag);
-    cameraButton.addEventListener('click', toggleCameraLock);
-    gameCanvas.addEventListener('click', setTargetFromClick);
-    window.addEventListener('resize', () => {
-      createGrid();
-      updatePlayerPosition();
-    });
-
     window.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const zoomIntensity = 0.1;
-      scale += (e.deltaY < 0 ? zoomIntensity : -zoomIntensity);
+      scale += (e.deltaY < 0 ? zoomStep : -zoomStep);
       scale = Math.min(maxScale, Math.max(minScale, scale));
       applyZoom();
     }, { passive: false });
+
+    gameCanvas.addEventListener('click', setTargetFromClick);
 
     setInterval(() => {
       if (movingUp || movingDown || movingLeft || movingRight) movePlayer();
