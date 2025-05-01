@@ -97,7 +97,7 @@
     </div>
   </div>
   <button id="camera-toggle">Lock</button>
-  <div id="version">v1.5 – Space Outline + Initial Lock Fix</div>
+  <div id="version">v1.6 – Space Recentering Fix</div>
 
   <script>
     const tileSize = 40;
@@ -125,7 +125,7 @@
     const maxScale = 2.5;
 
     let cameraLocked = true;
-    let userToggledLock = false; // default to false
+    let userToggledLock = false;
     let spaceHeld = false;
 
     const savedPos = JSON.parse(localStorage.getItem('cameraBtnPos'));
@@ -168,8 +168,6 @@
         const translateX = -px + offsetX;
         const translateY = -py + offsetY;
         gameCanvas.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
-      } else {
-        gameCanvas.style.transform = `scale(${scale})`;
       }
     }
 
@@ -297,6 +295,7 @@
     function updateCameraLockState() {
       cameraLocked = spaceHeld || userToggledLock;
       updatePlayerPosition();
+
       cameraButton.classList.toggle('active', userToggledLock);
       cameraButton.textContent = userToggledLock ? 'Lock' : 'Unlock';
 
@@ -305,6 +304,11 @@
       } else {
         cameraButton.classList.remove('space-outline');
       }
+
+      if (!cameraLocked && spaceHeld === false) {
+        const currentTransform = getComputedStyle(gameCanvas).transform;
+        gameCanvas.style.transform = currentTransform;
+      }
     }
 
     function toggleCameraLock() {
@@ -312,7 +316,6 @@
       updateCameraLockState();
     }
 
-    // === Dragging Logic ===
     let dragTimeout = null;
     let isDragging = false;
     let offsetX = 0;
