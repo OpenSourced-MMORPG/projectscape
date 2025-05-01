@@ -72,6 +72,11 @@
       box-shadow: 0 0 0 3px green !important;
     }
 
+    #camera-toggle.drag-ready,
+    #camera-toggle.dragging {
+      box-shadow: 0 0 0 3px yellow !important;
+    }
+
     #hamburger {
       position: fixed;
       top: 10px;
@@ -172,7 +177,6 @@
   <div id="settings-panel">
     <div class="settings-category">
       <button data-category="camera">Camera</button>
-      <!-- Future categories here -->
     </div>
     <div class="settings-group" id="camera-settings">
       <label>Camera Lock</label>
@@ -180,20 +184,20 @@
 
       <label>Panning Speed</label>
       <div class="slider-row">
-        <input type="range" id="panning-speed" min="1" max="75" value="10" />
+        <input type="range" id="panning-speed" min="1" max="100" value="10" />
         <span id="pan-speed-value">10</span>
       </div>
 
       <label>Zoom Speed</label>
       <div class="slider-row">
         <input type="range" id="zoom-speed" min="0.1" max="1" step="0.1" value="0.1" />
-        <span id="zoom-speed-value">0.1</span>
+        <span id="zoom-speed-value">10</span>
       </div>
     </div>
   </div>
 
   <button id="camera-toggle">Lock</button>
-  <div id="version">v1.7 – Stay Center + Category Menu</div>
+  <div id="version">v1.8 – Drag + Display Fix</div>
 
   <script>
     const tileSize = 40;
@@ -229,6 +233,9 @@
     let panX = 0, panY = 0;
     let mouseX = 0, mouseY = 0;
 
+    // Drag vars
+    let dragTimeout = null, isDragging = false, dragCanceled = false, offsetX = 0, offsetY = 0;
+
     function createGrid() {
       gameCanvas.innerHTML = '';
       const width = Math.floor(window.innerWidth / tileSize) * tileSize;
@@ -260,12 +267,26 @@
         const translateY = -py + offsetY;
         gameCanvas.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
 
-        // Save this position when space is released
         panX = translateX;
         panY = translateY;
       } else {
         gameCanvas.style.transform = `scale(${scale}) translate(${panX}px, ${panY}px)`;
       }
+    }
+
+    function updateCameraLockState() {
+      cameraLocked = spaceHeld || userToggledLock;
+      updatePlayerPosition();
+      cameraButton.classList.toggle('space-lock', spaceHeld);
+      cameraButton.classList.toggle('active', userToggledLock);
+      cameraButton.textContent = userToggledLock ? 'Lock' : 'Unlock';
+      cameraLockToggle.textContent = userToggledLock ? 'Unlock' : 'Lock';
+    }
+
+    function toggleCameraLock() {
+      if (isDragging) return;
+      userToggledLock = !userToggledLock;
+      updateCameraLockState();
     }
 
     function setTargetFromClick(e) {
@@ -305,21 +326,18 @@
       updatePlayerPosition();
     }
 
-    function updateCameraLockState() {
-      cameraLocked = spaceHeld || userToggledLock;
-      updatePlayerPosition();
-      cameraButton.classList.toggle('space-lock', spaceHeld);
-      cameraButton.classList.toggle('active', userToggledLock);
-      cameraButton.textContent = userToggledLock ? 'Lock' : 'Unlock';
-      cameraLockToggle.textContent = userToggledLock ? 'Unlock' : 'Lock';
+    function edgePanLoop() {
+      if (!cameraLocked && !spaceHeld) {
+        if (mouseX < 20) panX += panSpeed;
+        if (mouseX > window.innerWidth - 20) panX -= panSpeed;
+        if (mouseY < 20) panY += panSpeed;
+        if (mouseY > window.innerHeight - 20) panY -= panSpeed;
+        updatePlayerPosition();
+      }
+      requestAnimationFrame(edgePanLoop);
     }
 
-    function toggleCameraLock() {
-      userToggledLock = !userToggledLock;
-      updateCameraLockState();
-    }
-
-    // Input
+    // Input & Events
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
       switch (e.key) {
@@ -343,7 +361,7 @@
         case 'ArrowRight': movingRight = false; break;
         case ' ':
           spaceHeld = false;
-          cameraLocked = false; // keep camera free
+          cameraLocked = false;
           userToggledLock = false;
           updateCameraLockState();
           break;
@@ -355,17 +373,6 @@
       mouseY = e.clientY;
     });
 
-    function edgePanLoop() {
-      if (!cameraLocked && !spaceHeld) {
-        if (mouseX < 20) panX += panSpeed;
-        if (mouseX > window.innerWidth - 20) panX -= panSpeed;
-        if (mouseY < 20) panY += panSpeed;
-        if (mouseY > window.innerHeight - 20) panY -= panSpeed;
-        updatePlayerPosition();
-      }
-      requestAnimationFrame(edgePanLoop);
-    }
-
     window.addEventListener('wheel', (e) => {
       e.preventDefault();
       scale += (e.deltaY < 0 ? zoomStep : -zoomStep);
@@ -375,7 +382,7 @@
 
     gameCanvas.addEventListener('click', setTargetFromClick);
 
-    // Hamburger & Camera Settings
+    // UI Events
     hamburger.addEventListener('click', () => {
       settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block';
     });
@@ -389,23 +396,70 @@
     });
 
     cameraLockToggle.addEventListener('click', toggleCameraLock);
+
     panSpeedSlider.addEventListener('input', () => {
       panSpeed = parseInt(panSpeedSlider.value);
       panSpeedValue.textContent = panSpeed;
     });
+
     zoomSpeedSlider.addEventListener('input', () => {
       zoomStep = parseFloat(zoomSpeedSlider.value);
-      zoomSpeedValue.textContent = zoomStep;
+      zoomSpeedValue.textContent = Math.round(zoomStep * 100);
     });
 
-    setInterval(() => {
-      if (movingUp || movingDown || movingLeft || movingRight) movePlayer();
-      else if (playerCol !== targetCol || playerRow !== targetRow) moveToTarget();
-    }, beatDuration);
+    // Dragging logic
+    cameraButton.addEventListener('mousedown', e => {
+      dragCanceled = false;
+      const isCtrl = e.ctrlKey;
+      offsetX = e.clientX - cameraButton.offsetLeft;
+      offsetY = e.clientY - cameraButton.offsetTop;
+      if (isCtrl) {
+        isDragging = true;
+        cameraButton.classList.add('drag-ready', 'dragging');
+      } else {
+        dragTimeout = setTimeout(() => {
+          isDragging = true;
+          cameraButton.classList.add('drag-ready', 'dragging');
+        }, 1000);
+      }
+    });
 
+    window.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+      dragCanceled = true;
+      cameraButton.style.left = `${e.clientX - offsetX}px`;
+      cameraButton.style.top = `${e.clientY - offsetY}px`;
+      cameraButton.style.right = 'auto';
+      cameraButton.style.bottom = 'auto';
+    });
+
+    window.addEventListener('mouseup', () => {
+      clearTimeout(dragTimeout);
+      if (isDragging) {
+        isDragging = false;
+        cameraButton.classList.remove('drag-ready', 'dragging');
+        localStorage.setItem('cameraBtnPos', JSON.stringify({
+          left: cameraButton.style.left,
+          top: cameraButton.style.top
+        }));
+      }
+    });
+
+    cameraButton.addEventListener('click', e => {
+      if (dragCanceled) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        return;
+      }
+      toggleCameraLock();
+    });
+
+    // Init
     createGrid();
     updatePlayerPosition();
     edgePanLoop();
+    panSpeedValue.textContent = panSpeed;
+    zoomSpeedValue.textContent = Math.round(zoomStep * 100);
   </script>
 </body>
 </html>
