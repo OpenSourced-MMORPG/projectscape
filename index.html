@@ -35,6 +35,15 @@
   border: 1px solid #111;
 }
 
+.rail {
+  position: absolute;
+  width: 40px;
+  height: 6px;
+  background: #0ff;
+  box-shadow: 0 0 8px #0ff;
+  z-index: 0;
+}
+
 svg#player {
   position: absolute;
   width: 40px;
@@ -106,20 +115,64 @@ svg#player {
 </head>
 <body>
   <div id="viewport">
-    <div id="game-canvas">
-      <div id="skateboard"></div>
-      <svg id="player">
-        <circle cx="20" cy="20" r="15" fill="lime" />
-      </svg>
-    </div>
+    <div id="game-canvas"></div>
   </div>
   <button id="camera-toggle">Lock</button>
   <button id="ride-toggle">Ride</button>
-  <div id="version">v1.7 – Skateboarding Added</div>  <script>
-    let rideEnabled = false;
-    const rideToggle = document.getElementById('ride-toggle');
+  <div id="version">v1.8 – Grind Rails Added</div>  <div id="skateboard"></div>
+  <svg id="player">
+    <circle cx="20" cy="20" r="15" fill="lime" />
+  </svg>  <script>
+    const tileSize = 40;
+    const viewport = document.getElementById('viewport');
+    const gameCanvas = document.getElementById('game-canvas');
+    const playerSvg = document.getElementById('player');
     const skateboard = document.getElementById('skateboard');
+    const cameraButton = document.getElementById('camera-toggle');
+    const rideToggle = document.getElementById('ride-toggle');
+
+    let cols = 0;
+    let rows = 0;
+    let playerCol = 5;
+    let playerRow = 5;
+    let targetCol = 5;
+    let targetRow = 5;
+    let scale = 1;
+    const minScale = 0.5;
+    const maxScale = 2.5;
+    let cameraLocked = true;
+    let userToggledLock = false;
+    let spaceHeld = false;
+    let rideEnabled = false;
+    let grinding = false;
     let beatDuration = 600;
+
+    function createGrid() {
+      gameCanvas.innerHTML = '';
+      const width = Math.floor(window.innerWidth / tileSize) * tileSize;
+      const height = Math.floor(window.innerHeight / tileSize) * tileSize;
+      cols = width / tileSize;
+      rows = height / tileSize;
+
+      for (let i = 0; i < cols * rows; i++) {
+        const tile = document.createElement('div');
+        tile.className = 'tile';
+        gameCanvas.appendChild(tile);
+      }
+
+      // Add rails (horizontal at row 10)
+      for (let c = 2; c < cols - 2; c++) {
+        const rail = document.createElement('div');
+        rail.className = 'rail';
+        rail.style.left = (c * tileSize) + 'px';
+        rail.style.top = (10 * tileSize + 17) + 'px';
+        gameCanvas.appendChild(rail);
+      }
+
+      gameCanvas.appendChild(skateboard);
+      gameCanvas.appendChild(playerSvg);
+      updatePlayerPosition();
+    }
 
     rideToggle.addEventListener('click', () => {
       rideEnabled = !rideEnabled;
@@ -145,5 +198,44 @@ svg#player {
         gameCanvas.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
       }
     }
+
+    function isOnRail() {
+      return rideEnabled && playerRow === 10;
+    }
+
+    function grindStep() {
+      if (isOnRail()) {
+        if (playerCol < cols - 2) playerCol++;
+        else grinding = false;
+      } else {
+        grinding = false;
+      }
+    }
+
+    setInterval(() => {
+      if (grinding) {
+        grindStep();
+      } else if (playerCol !== targetCol || playerRow !== targetRow) {
+        if (isOnRail()) grinding = true;
+        else {
+          if (playerCol < targetCol) playerCol++;
+          else if (playerCol > targetCol) playerCol--;
+          if (playerRow < targetRow) playerRow++;
+          else if (playerRow > targetRow) playerRow--;
+        }
+      }
+      updatePlayerPosition();
+    }, beatDuration);
+
+    gameCanvas.addEventListener('click', (e) => {
+      const rect = gameCanvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) / scale;
+      const clickY = (e.clientY - rect.top) / scale;
+      targetCol = Math.floor(clickX / tileSize);
+      targetRow = Math.floor(clickY / tileSize);
+    });
+
+    window.addEventListener('resize', createGrid);
+    createGrid();
   </script></body>
 </html>
