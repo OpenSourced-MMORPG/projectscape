@@ -213,29 +213,35 @@ svg#player {
       }
     }
 
-    setInterval(() => {
-      if (rideEnabled) {
-        if (grinding) {
-          grindStep();
-        } else if (playerCol !== targetCol || playerRow !== targetRow) {
-          if (isOnRail()) grinding = true;
-          else {
-            if (playerCol < targetCol) playerCol++;
-            else if (playerCol > targetCol) playerCol--;
-            if (playerRow < targetRow) playerRow++;
-            else if (playerRow > targetRow) playerRow--;
-          }
-        }
-      } else {
-        if (playerCol !== targetCol || playerRow !== targetRow) {
+    function mainLoop() {
+  let interval = rideEnabled ? beatDuration * 0.25 : beatDuration;
+  setTimeout(() => {
+    if (rideEnabled) {
+      if (grinding) {
+        grindStep();
+      } else if (playerCol !== targetCol || playerRow !== targetRow) {
+        if (isOnRail()) grinding = true;
+        else {
           if (playerCol < targetCol) playerCol++;
           else if (playerCol > targetCol) playerCol--;
           if (playerRow < targetRow) playerRow++;
           else if (playerRow > targetRow) playerRow--;
         }
       }
-      updatePlayerPosition();
-    }, beatDuration * (rideEnabled ? 0.25 : 1));
+    } else {
+      if (playerCol !== targetCol || playerRow !== targetRow) {
+        if (playerCol < targetCol) playerCol++;
+        else if (playerCol > targetCol) playerCol--;
+        if (playerRow < targetRow) playerRow++;
+        else if (playerRow > targetRow) playerRow--;
+      }
+    }
+    updatePlayerPosition();
+    mainLoop();
+  }, interval);
+}
+
+mainLoop();
 
     gameCanvas.addEventListener('click', (e) => {
       const rect = gameCanvas.getBoundingClientRect();
