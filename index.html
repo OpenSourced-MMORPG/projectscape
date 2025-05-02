@@ -1,6 +1,7 @@
 /** FULL UPDATED FILE WITH INTERPOLATED MOVEMENT INCLUDED **/
 
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -102,46 +103,47 @@
   <!-- everything before remains the same -->
   <div id="version">v2.0 – Interpolated Movement</div>
   <script>
-    // ... existing variables ...function animatePlayerTo(x, y) {
-  const duration = beatDuration * 0.9;
-  const startX = parseFloat(playerSvg.style.left) || 0;
-  const startY = parseFloat(playerSvg.style.top) || 0;
-  const deltaX = x - startX;
-  const deltaY = y - startY;
-  const start = performance.now();
+    // ... existing variables ...
 
-  function step(t) {
-    const progress = Math.min(1, (t - start) / duration);
-    const currentX = startX + deltaX * progress;
-    const currentY = startY + deltaY * progress;
-    playerSvg.style.left = currentX + 'px';
-    playerSvg.style.top = currentY + 'px';
-    skateboard.style.left = currentX + 'px';
-    skateboard.style.top = (currentY - 40) + 'px';
-    if (progress < 1) requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
-}
+    function animatePlayerTo(x, y) {
+      const duration = beatDuration * 0.9;
+      const startX = parseFloat(playerSvg.style.left) || 0;
+      const startY = parseFloat(playerSvg.style.top) || 0;
+      const deltaX = x - startX;
+      const deltaY = y - startY;
+      const start = performance.now();
 
-function updatePlayerPosition() {
-  const px = playerCol * tileSize;
-  const py = playerRow * tileSize;
-  animatePlayerTo(px, py);
+      function step(t) {
+        const progress = Math.min(1, (t - start) / duration);
+        const currentX = startX + deltaX * progress;
+        const currentY = startY + deltaY * progress;
+        playerSvg.style.left = currentX + 'px';
+        playerSvg.style.top = currentY + 'px';
+        skateboard.style.left = currentX + 'px';
+        skateboard.style.top = (currentY - 40) + 'px';
+        if (progress < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
 
-  const angleDeg = (lastDir * 180 / Math.PI) + 90;
-  skateboard.style.transform = `rotate(${angleDeg}deg)`;
+    function updatePlayerPosition() {
+      const px = playerCol * tileSize;
+      const py = playerRow * tileSize;
+      animatePlayerTo(px, py);
 
-  if (cameraLocked) {
-    const offsetX = (viewport.clientWidth / 2 - tileSize / 2) / scale;
-    const offsetY = (viewport.clientHeight / 2 - tileSize / 2) / scale;
-    const translateX = -px + offsetX;
-    const translateY = -py + offsetY;
-    gameCanvas.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
-  }
-}
+      const angleDeg = (lastDir * 180 / Math.PI) + 90;
+      skateboard.style.transform = `rotate(${angleDeg}deg)`;
 
-// ... everything else remains unchanged ...
+      if (cameraLocked) {
+        const offsetX = (viewport.clientWidth / 2 - tileSize / 2) / scale;
+        const offsetY = (viewport.clientHeight / 2 - tileSize / 2) / scale;
+        const translateX = -px + offsetX;
+        const translateY = -py + offsetY;
+        gameCanvas.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
+      }
+    }
 
+    // ... everything else remains unchanged ...
   </script>
 </body>
 </html>
