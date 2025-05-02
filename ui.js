@@ -1,1 +1,38 @@
-document.querySelectorAll('#camera-toggle,#skate-toggle').forEach(t=>{let e=!1,o,s,n;t.addEventListener('mousedown',a=>{n=setTimeout(()=>{e=!0,t.classList.add('dragging'),o=a.clientX-t.offsetLeft,s=a.clientY-t.offsetTop},500)}),addEventListener('mousemove',a=>{e&&(t.style.left=`${a.clientX-o}px`,t.style.top=`${a.clientY-s}px`)}),addEventListener('mouseup',()=>{clearTimeout(n),e=!1,t.classList.remove('dragging')})});
+document.querySelectorAll('button').forEach(button => {
+  let isDragging = false;
+  let offsetX = 0, offsetY = 0;
+  let dragTimeout;
+
+  button.addEventListener('mousedown', e => {
+    // Start 1s timer to allow drag
+    dragTimeout = setTimeout(() => {
+      isDragging = true;
+      offsetX = e.clientX - button.offsetLeft;
+      offsetY = e.clientY - button.offsetTop;
+      button.classList.add('dragging');
+      button.style.position = 'fixed'; // Ensure it can move freely
+      button.style.zIndex = 10;
+    }, 1000);
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (isDragging) {
+      button.style.left = `${e.clientX - offsetX}px`;
+      button.style.top = `${e.clientY - offsetY}px`;
+    }
+  });
+
+  document.addEventListener('mouseup', e => {
+    clearTimeout(dragTimeout);
+    if (isDragging) {
+      isDragging = false;
+      button.classList.remove('dragging');
+    }
+  });
+
+  button.addEventListener('click', e => {
+    if (!isDragging) {
+      button.classList.toggle('active');
+    }
+  });
+});
