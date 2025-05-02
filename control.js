@@ -1,1 +1,2 @@
-gameCanvas.addEventListener('click',e=>{const t=gameCanvas.getBoundingClientRect();targetCol=Math.floor((e.clientX-t.left)/scale/tileSize),targetRow=Math.floor((e.clientY-t.top)/scale/tileSize)});function zoomHandler(e){e.preventDefault(),scale+=e.deltaY<0?.1:-.1,scale=Math.min(maxScale,Math.max(minScale,scale)),updatePlayerPosition()}
+console.log('control.js loaded');
+window.updateControl = () => {};
