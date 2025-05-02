@@ -1,3 +1,5 @@
+console.log("main.js is running");
+
 // main.js
 
 let lastTime = 0;
