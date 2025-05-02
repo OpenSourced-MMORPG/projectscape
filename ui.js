@@ -1,27 +1,36 @@
 document.querySelectorAll('button').forEach(button => {
   let isDragging = false;
-  let offsetX = 0, offsetY = 0;
+  let dragOffset = { x: 0, y: 0 };
   let dragTimeout;
 
+  // Only make button draggable after 1s hold
   button.addEventListener('mousedown', e => {
-    // Start 1s timer to allow drag
+    // Skip right-click or if already draggable
+    if (e.button !== 0) return;
+
     dragTimeout = setTimeout(() => {
       isDragging = true;
-      offsetX = e.clientX - button.offsetLeft;
-      offsetY = e.clientY - button.offsetTop;
+      const rect = button.getBoundingClientRect();
+      dragOffset.x = e.clientX - rect.left;
+      dragOffset.y = e.clientY - rect.top;
+
+      // Enable absolute positioning only on drag
+      button.style.position = 'fixed';
+      button.style.left = `${rect.left}px`;
+      button.style.top = `${rect.top}px`;
       button.classList.add('dragging');
-      button.style.position = 'fixed'; // Ensure it can move freely
-      button.style.zIndex = 10;
     }, 1000);
   });
 
+  // Move the button while dragging
   document.addEventListener('mousemove', e => {
     if (isDragging) {
-      button.style.left = `${e.clientX - offsetX}px`;
-      button.style.top = `${e.clientY - offsetY}px`;
+      button.style.left = `${e.clientX - dragOffset.x}px`;
+      button.style.top = `${e.clientY - dragOffset.y}px`;
     }
   });
 
+  // Cleanup drag state
   document.addEventListener('mouseup', e => {
     clearTimeout(dragTimeout);
     if (isDragging) {
@@ -30,6 +39,7 @@ document.querySelectorAll('button').forEach(button => {
     }
   });
 
+  // Toggle on click if not dragging
   button.addEventListener('click', e => {
     if (!isDragging) {
       button.classList.toggle('active');
