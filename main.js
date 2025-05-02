@@ -1,9 +1,7 @@
-console.log("main.js is running");
-
-// main.js
+console.log("main.js running");
 
 let lastTime = 0;
-let tickRate = 1000 / 60; // 60 FPS
+let tickRate = 1000 / 60;
 let keys = {};
 
 window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
@@ -25,8 +23,10 @@ function update() {
 
 function resizeCanvas() {
   const canvas = document.getElementById('game-canvas');
-  canvas.style.width = window.innerWidth + 'px';
-  canvas.style.height = window.innerHeight + 'px';
+  if (canvas) {
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+  }
 }
 
 window.addEventListener('resize', resizeCanvas);
