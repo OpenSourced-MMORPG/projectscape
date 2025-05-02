@@ -1,1 +1,32 @@
-const tileSize=40,beatDuration=600,viewport=document.getElementById('viewport'),gameCanvas=document.getElementById('game-canvas'),playerSvg=document.getElementById('player'),skateboard=document.getElementById('skateboard');let cols=0,rows=0,scale=1;const minScale=.5,maxScale=2.5;window.addEventListener('resize',createGrid);window.addEventListener('wheel',zoomHandler,{passive:!1});createGrid();updatePlayerPosition();
+// main.js
+
+let lastTime = 0;
+let tickRate = 1000 / 60; // 60 FPS
+let keys = {};
+
+window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+function gameLoop(timestamp) {
+  if (timestamp - lastTime >= tickRate) {
+    update();
+    lastTime = timestamp;
+  }
+  requestAnimationFrame(gameLoop);
+}
+
+function update() {
+  if (window.updatePlayer) updatePlayer();
+  if (window.updateCamera) updateCamera();
+  if (window.updateUI) updateUI();
+}
+
+function resizeCanvas() {
+  const canvas = document.getElementById('game-canvas');
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+requestAnimationFrame(gameLoop);
