@@ -4,7 +4,7 @@ document.querySelectorAll('button').forEach(button => {
   let dragTimer;
 
   button.addEventListener('mousedown', e => {
-    if (e.button !== 0) return;
+    if (e.button !== 0) return; // Only respond to left-click
 
     dragTimer = setTimeout(() => {
       isDragging = true;
@@ -12,12 +12,12 @@ document.querySelectorAll('button').forEach(button => {
       dragOffsetX = e.clientX - rect.left;
       dragOffsetY = e.clientY - rect.top;
 
-      // Only enable positioning on drag
+      // Apply fixed positioning for dragging
       button.style.position = 'fixed';
       button.style.left = `${rect.left}px`;
       button.style.top = `${rect.top}px`;
       button.classList.add('dragging');
-    }, 500);
+    }, 1000); // 1-second hold to initiate drag
   });
 
   document.addEventListener('mousemove', e => {
