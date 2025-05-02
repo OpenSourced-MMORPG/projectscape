@@ -40,6 +40,7 @@
       height: 40px;
       z-index: 1;
       pointer-events: none;
+      transition: left 0.25s linear, top 0.25s linear;
     }
     svg#skateboard {
       position: absolute;
@@ -49,6 +50,7 @@
       pointer-events: none;
       z-index: 0;
       display: none;
+      transition: left 0.25s linear, top 0.25s linear;
     }
     #camera-toggle, #skate-toggle {
       position: fixed;
@@ -110,7 +112,7 @@
   </div>
   <button id="camera-toggle">Lock</button>
   <button id="skate-toggle">Skate</button>
-  <div id="version">v1.8 – Skateboard Centered & Aligned</div>
+  <div id="version">v1.9 – Smooth Skating</div>
   <script>
     const tileSize = 40;
     const beatDuration = 600;
@@ -244,9 +246,7 @@
       applyZoom();
     }, { passive: false });
 
-    // Pinch-to-zoom support
     let pinchZoomInitialDistance = null;
-
     function getPinchDistance(touches) {
       const dx = touches[0].clientX - touches[1].clientX;
       const dy = touches[0].clientY - touches[1].clientY;
