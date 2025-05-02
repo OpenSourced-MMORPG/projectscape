@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -65,13 +64,27 @@
       user-select: none;
       touch-action: none;
     }
-    #camera-toggle { bottom: 20px; right: 20px; }
-    #skate-toggle { bottom: 120px; right: 20px; }
-    #camera-toggle.active { box-shadow: 0 0 0 3px lime; }
+    #camera-toggle {
+      bottom: 20px;
+      right: 20px;
+    }
+    #skate-toggle {
+      bottom: 120px;
+      right: 20px;
+    }
+    #camera-toggle.active {
+      box-shadow: 0 0 0 3px lime;
+    }
     #camera-toggle.drag-ready,
-    #camera-toggle.dragging { box-shadow: 0 0 0 3px yellow !important; }
-    #camera-toggle.space-outline { box-shadow: 0 0 0 2px rgba(0, 255, 0, 0.5) !important; }
-    #skate-toggle.active { box-shadow: 0 0 0 3px cyan; }
+    #camera-toggle.dragging {
+      box-shadow: 0 0 0 3px yellow !important;
+    }
+    #camera-toggle.space-outline {
+      box-shadow: 0 0 0 2px rgba(0, 255, 0, 0.5) !important;
+    }
+    #skate-toggle.active {
+      box-shadow: 0 0 0 3px cyan;
+    }
     #version {
       position: fixed;
       top: 5px;
@@ -106,13 +119,11 @@
     const skateboard = document.getElementById('skateboard');
     const cameraButton = document.getElementById('camera-toggle');
     const skateButton = document.getElementById('skate-toggle');
-
     let cols = 0, rows = 0;
     let playerCol = 5, playerRow = 5, targetCol = 5, targetRow = 5;
     let movingUp = false, movingDown = false, movingLeft = false, movingRight = false;
     let scale = 1, minScale = 0.5, maxScale = 2.5;
     let cameraLocked = true, userToggledLock = false, spaceHeld = false, isSkating = false, lastDir = 0;
-
     const savedPos = JSON.parse(localStorage.getItem('cameraBtnPos'));
     if (savedPos) {
       cameraButton.style.left = savedPos.left;
@@ -120,7 +131,6 @@
       cameraButton.style.right = 'auto';
       cameraButton.style.bottom = 'auto';
     }
-
     function createGrid() {
       gameCanvas.innerHTML = '';
       cols = Math.floor(window.innerWidth / tileSize) * 10;
@@ -135,15 +145,13 @@
       gameCanvas.appendChild(skateboard);
       gameCanvas.appendChild(playerSvg);
     }
-
     function animatePlayerTo(x, y) {
-      const duration = beatDuration * 0.9;
+      const duration = beatDuration * 1.8;
       const startX = parseFloat(playerSvg.style.left) || 0;
       const startY = parseFloat(playerSvg.style.top) || 0;
       const deltaX = x - startX;
       const deltaY = y - startY;
       const start = performance.now();
-
       function step(t) {
         const progress = Math.min(1, (t - start) / duration);
         const currentX = startX + deltaX * progress;
@@ -156,15 +164,12 @@
       }
       requestAnimationFrame(step);
     }
-
     function updatePlayerPosition() {
       const px = playerCol * tileSize;
       const py = playerRow * tileSize;
       animatePlayerTo(px, py);
-
       const angleDeg = (lastDir * 180 / Math.PI) + 90;
       skateboard.style.transform = `rotate(${angleDeg}deg)`;
-
       if (cameraLocked) {
         const offsetX = (viewport.clientWidth / 2 - tileSize / 2) / scale;
         const offsetY = (viewport.clientHeight / 2 - tileSize / 2) / scale;
@@ -173,7 +178,6 @@
         gameCanvas.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
       }
     }
-
     function movePlayer() {
       let newCol = playerCol, newRow = playerRow;
       if (movingUp) newRow--;
@@ -188,7 +192,6 @@
         updatePlayerPosition();
       }
     }
-
     function moveToTarget() {
       let dx = targetCol - playerCol;
       let dy = targetRow - playerRow;
@@ -205,7 +208,6 @@
         }
       }
     }
-
     function setTargetFromClick(e) {
       const rect = gameCanvas.getBoundingClientRect();
       const clickX = (e.clientX - rect.left) / scale;
@@ -214,11 +216,9 @@
       targetRow = Math.floor(clickY / tileSize);
       movingUp = movingDown = movingLeft = movingRight = false;
     }
-
     function applyZoom() {
       updatePlayerPosition();
     }
-
     window.addEventListener('wheel', (e) => {
       e.preventDefault();
       const zoomIntensity = 0.1;
@@ -226,7 +226,6 @@
       scale = Math.min(maxScale, Math.max(minScale, scale));
       applyZoom();
     }, { passive: false });
-
     window.addEventListener('resize', () => {
       const oldCol = playerCol, oldRow = playerRow;
       createGrid();
@@ -236,7 +235,6 @@
       targetRow = playerRow;
       updatePlayerPosition();
     });
-
     window.addEventListener('keydown', (e) => {
       if (e.repeat) return;
       switch (e.key) {
@@ -248,7 +246,6 @@
         case ' ': spaceHeld = true; updateCameraLockState(); break;
       }
     });
-
     window.addEventListener('keyup', (e) => {
       switch (e.key) {
         case 'ArrowUp': movingUp = false; break;
@@ -258,7 +255,6 @@
         case ' ': spaceHeld = false; updateCameraLockState(); break;
       }
     });
-
     function updateCameraLockState() {
       cameraLocked = spaceHeld || userToggledLock;
       updatePlayerPosition();
@@ -266,21 +262,17 @@
       cameraButton.textContent = userToggledLock ? 'Lock' : 'Unlock';
       cameraButton.classList.toggle('space-outline', spaceHeld);
     }
-
     function toggleCameraLock() {
       userToggledLock = !userToggledLock;
       updateCameraLockState();
     }
-
     function toggleSkateboard() {
       isSkating = !isSkating;
       skateButton.classList.toggle('active', isSkating);
       skateButton.textContent = isSkating ? 'Skate' : 'Walk';
       skateboard.style.display = isSkating ? 'block' : 'none';
     }
-
     let dragTimeout = null, isDragging = false, offsetX = 0, offsetY = 0;
-
     function startDragCheck(e) {
       const isCtrl = e.ctrlKey || (e.touches && e.touches[0].ctrlKey);
       const startX = (e.touches ? e.touches[0].clientX : e.clientX);
@@ -297,7 +289,6 @@
         }, 1000);
       }
     }
-
     function doDrag(e) {
       if (!isDragging) return;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -307,7 +298,6 @@
       cameraButton.style.right = 'auto';
       cameraButton.style.bottom = 'auto';
     }
-
     function stopDrag() {
       clearTimeout(dragTimeout);
       isDragging = false;
@@ -317,7 +307,6 @@
         top: cameraButton.style.top
       }));
     }
-
     cameraButton.addEventListener('click', (e) => {
       if (e.ctrlKey || isDragging) {
         e.stopImmediatePropagation();
@@ -326,7 +315,6 @@
       }
       toggleCameraLock();
     }, true);
-
     skateButton.addEventListener('click', toggleSkateboard);
     cameraButton.addEventListener('mousedown', startDragCheck);
     cameraButton.addEventListener('touchstart', startDragCheck, { passive: false });
@@ -335,12 +323,10 @@
     window.addEventListener('mouseup', stopDrag);
     window.addEventListener('touchend', stopDrag);
     gameCanvas.addEventListener('click', setTargetFromClick);
-
     setInterval(() => {
       if (movingUp || movingDown || movingLeft || movingRight) movePlayer();
       else if (playerCol !== targetCol || playerRow !== targetRow) moveToTarget();
     }, beatDuration);
-
     createGrid();
     updatePlayerPosition();
   </script>
