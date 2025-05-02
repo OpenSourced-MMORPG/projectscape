@@ -244,6 +244,39 @@
       applyZoom();
     }, { passive: false });
 
+    // Pinch-to-zoom support
+    let pinchZoomInitialDistance = null;
+
+    function getPinchDistance(touches) {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    gameCanvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        pinchZoomInitialDistance = getPinchDistance(e.touches);
+      }
+    }, { passive: false });
+
+    gameCanvas.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2 && pinchZoomInitialDistance) {
+        e.preventDefault();
+        const currentDistance = getPinchDistance(e.touches);
+        const zoomFactor = currentDistance / pinchZoomInitialDistance;
+        scale *= zoomFactor;
+        scale = Math.min(maxScale, Math.max(minScale, scale));
+        pinchZoomInitialDistance = currentDistance;
+        applyZoom();
+      }
+    }, { passive: false });
+
+    gameCanvas.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) {
+        pinchZoomInitialDistance = null;
+      }
+    });
+
     window.addEventListener('resize', () => {
       const oldCol = playerCol;
       const oldRow = playerRow;
