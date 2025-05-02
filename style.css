@@ -1,0 +1,10 @@
+html, body { margin: 0; padding: 0; overflow: hidden; height: 100%; background: #000; font-family: sans-serif; }
+#viewport { width: 100%; height: 100%; overflow: hidden; position: relative; }
+#game-canvas { position: absolute; background: #222; display: flex; flex-wrap: wrap; transform-origin: 0 0; touch-action: none; transition: transform 0.2s ease; }
+.tile { width: 40px; height: 40px; box-sizing: border-box; border: 1px solid #111; }
+svg#player, svg#skateboard { position: absolute; pointer-events: none; }
+#camera-toggle, #skate-toggle { position: fixed; width: 80px; height: 80px; font-size: 14px; z-index: 10; border: none; background: #444; color: white; border-radius: 12px; outline: none; transition: box-shadow 0.2s ease; user-select: none; touch-action: none; }
+#camera-toggle { bottom: 20px; right: 20px; }
+#skate-toggle { bottom: 120px; right: 20px; }
+.active { box-shadow: 0 0 0 3px lime; }
+.dragging { box-shadow: 0 0 0 3px yellow !important; }
