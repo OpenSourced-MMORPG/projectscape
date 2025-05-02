@@ -1,30 +1,32 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>OSRS-Style Game</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <div id="viewport">
-    <div id="game-canvas">
-      <svg id="skateboard" viewBox="0 0 40 120">
-        <rect x="5" y="0" width="30" height="120" rx="10" ry="10" fill="gray" stroke="black" stroke-width="2"/>
-      </svg>
-      <svg id="player">
-        <circle cx="20" cy="20" r="15" fill="lime"/>
-      </svg>
-    </div>
-  </div>
-  <button id="camera-toggle">Lock</button>
-  <button id="skate-toggle">Skate</button>
-  <div id="version">v1.8 – Skateboard Centered & Aligned</div>
+// main.js
 
-  <script src="scripts/main.js"></script>
-  <script src="scripts/player.js"></script>
-  <script src="scripts/camera.js"></script>
-  <script src="scripts/controls.js"></script>
-  <script src="scripts/ui.js"></script>
-</body>
-</html>
+let lastTime = 0;
+let tickRate = 1000 / 60; // 60 FPS
+let keys = {};
+
+window.addEventListener('keydown', e => keys[e.key.toLowerCase()] = true);
+window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+function gameLoop(timestamp) {
+  if (timestamp - lastTime >= tickRate) {
+    update();
+    lastTime = timestamp;
+  }
+  requestAnimationFrame(gameLoop);
+}
+
+function update() {
+  if (window.updatePlayer) updatePlayer();
+  if (window.updateCamera) updateCamera();
+  if (window.updateUI) updateUI();
+}
+
+function resizeCanvas() {
+  const canvas = document.getElementById('game-canvas');
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+requestAnimationFrame(gameLoop);
