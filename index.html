@@ -1,114 +1,377 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Creative Cortex</title>
+  <meta charset="UTF-8">
+  <title>Fancy Combo Trainer</title>
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: #0b0c10;
+    body {
+      background-color: #121212;
+      color: #fff;
       font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      padding: 10px;
     }
-    canvas {
+    #container {
+      width: 800px;
+      height: 450px;
+      aspect-ratio: 16 / 9;
+      background-color: #222;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+    #video {
+      width: 100%;
+      flex-grow: 1;
+      min-height: 300px;
+      background-color: #111;
       display: block;
     }
-    #eureka {
+    #comboBar {
+      position: relative;
+      height: 48px;
+      background-color: #444;
+      cursor: pointer;
+      overflow: hidden;
+      padding: 0 12px;
+      box-sizing: border-box;
+      flex-shrink: 0;
+    }
+    .comboMarker {
       position: absolute;
-      top: 20px;
-      left: 50%;
+      height: 100%;
+      width: 4px;
+      background-color: #0af;
+      cursor: pointer;
+    }
+    .comboLabel {
+      position: absolute;
+      bottom: 2px;
       transform: translateX(-50%);
-      font-size: 24px;
+      background-color: #000;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #fff;
+      font-weight: bold;
+      font-size: 12px;
       color: #fff;
-      background: rgba(0,0,0,0.5);
-      padding: 10px 20px;
-      border-radius: 8px;
-      display: none;
-      z-index: 10;
+      text-shadow: 0 0 3px #000, 0 0 6px #00f;
+      white-space: nowrap;
+      pointer-events: auto;
+    }
+    #currentMarker {
+      position: absolute;
+      height: 100%;
+      width: 2px;
+      background-color: #ff0;
+      cursor: ew-resize;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 8px;
+      justify-content: center;
+      align-items: center;
+      background: #111;
+      flex-shrink: 0;
+    }
+    button, input[type=file] {
+      background-color: #333;
+      border: none;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #555;
+    }
+    .grade-feedback {
+      text-align: center;
+      margin-top: 10px;
+    }
+    #comboLog {
+      font-size: 12px;
+      white-space: pre-wrap;
+      margin-top: 8px;
+      max-height: 120px;
+      overflow-y: auto;
+      background: #1a1a1a;
+      border: 1px solid #444;
+      padding: 6px;
+      width: 100%;
+      box-sizing: border-box;
+      flex-shrink: 0;
+    }
+  
+    #clickOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .clickBox {
+      position: absolute;
+      border: 2px solid red;
+      background: rgba(255, 0, 0, 0.3);
+      pointer-events: auto;
+      cursor: pointer;
     }
   </style>
+
 </head>
 <body>
-<div id="eureka">EUREKA!</div>
-<canvas id="cortex"></canvas>
+  <div id="container">
+    <video id="video" controls autoplay muted playsinline></video>
+    <div id="clickOverlay" style="z-index: 2;"></div>
+    <div id="comboBar" style="z-index: 3;">
+      <div id="currentMarker"></div>
+    </div>
+    <div class="controls">
+      <button onclick="resizeApp(-1)">-</button>
+      <button onclick="resizeApp(1)">+</button>
+      <button onclick="toggleFullScreen()">Fullscreen</button>
+      <input type="file" id="fileInput">
+      <button id="resetBtn">Assign Reset Key</button>
+      <button onclick="toggleEditMode()" id="editToggle">Edit Combo: ON</button>
+    </div>
+    <div class="grade-feedback" id="feedback"></div>
+    <div id="comboLog"></div>
+  </div>
 <script>
-  const canvas = document.getElementById('cortex');
-  const ctx = canvas.getContext('2d');
-  const eurekaDiv = document.getElementById('eureka');
+let video = document.getElementById('video');
+let fileInput = document.getElementById('fileInput');
+let comboBar = document.getElementById('comboBar');
+let currentMarker = document.getElementById('currentMarker');
+let feedback = document.getElementById('feedback');
+let editToggle = document.getElementById('editToggle');
+let comboLog = document.getElementById('comboLog');
+let resetBtn = document.getElementById('resetBtn');
+let comboSteps = [];
+let currentStep = 0;
+let comboStartTime;
+let recording = true;
+let isDragging = false;
+let editMode = true;
+let resetKey = null;
 
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+fileInput.onchange = () => {
+  video.src = URL.createObjectURL(fileInput.files[0]);
+};
 
-  let nodes = [];
-
-  function spawnNode(x, y) {
-    nodes.push({
-      x, y,
-      vx: (Math.random() - 0.5),
-      vy: (Math.random() - 0.5),
-      connections: 0
-    });
+document.addEventListener('keydown', e => {
+  if (isFinite(video.duration)) {
+    const step = 1 / 30; // ~1 frame for 30fps
+    if (e.key === 'ArrowLeft') {
+      video.currentTime = Math.max(0, video.currentTime - step);
+      return;
+    } else if (e.key === 'ArrowRight') {
+      video.currentTime = Math.min(video.duration, video.currentTime + step);
+      return;
+    }
   }
-
-  canvas.addEventListener('click', e => {
-    spawnNode(e.clientX, e.clientY);
-  });
-
-  function animate() {
-    ctx.fillStyle = 'rgba(11, 12, 16, 0.2)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    nodes.forEach(n => {
-      n.x += n.vx;
-      n.y += n.vy;
-      if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
-      if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
-    });
-
-    let totalConnections = 0;
-
-    // Draw connections
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const a = nodes[i];
-        const b = nodes[j];
-        const dx = a.x - b.x;
-        const dy = a.y - b.y;
-        const dist = Math.hypot(dx, dy);
-        if (dist < 100) {
-          ctx.strokeStyle = `rgba(255, 255, 255, ${1 - dist / 100})`;
-          ctx.beginPath();
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
-          ctx.stroke();
-          a.connections++;
-          b.connections++;
-          totalConnections++;
-        }
+  if (resetKey && e.key === resetKey) {
+    resetCombo();
+    if (editMode) toggleEditMode();
+  }
+  if (recording && editMode && video.duration > 0) {
+    const time = video.currentTime;
+    const key = e.key.toUpperCase();
+    comboSteps.push({ key, time });
+    comboSteps.sort((a, b) => a.time - b.time);
+    renderMarkers();
+    return;
+  }
+  if (currentStep < comboSteps.length && e.key.toUpperCase() === comboSteps[currentStep].key) {
+    if (!comboStartTime) {
+      comboStartTime = performance.now();
+      if (isFinite(video.duration)) {
+        video.currentTime = comboSteps[0].time;
+        video.play();
       }
     }
-
-    // Draw nodes
-    nodes.forEach(n => {
-      ctx.beginPath();
-      ctx.fillStyle = `hsl(${(n.connections * 40) % 360}, 100%, 60%)`;
-      ctx.arc(n.x, n.y, 4, 0, Math.PI * 2);
-      ctx.fill();
-      n.connections = 0;
-    });
-
-    // Eureka moment
-    if (totalConnections > 100 && !eurekaDiv.style.display) {
-      eurekaDiv.style.display = 'block';
-      setTimeout(() => eurekaDiv.style.display = 'none', 3000);
+    gradeInput();
+    if (currentStep < comboSteps.length) {
+      video.play();
     }
-
-    requestAnimationFrame(animate);
   }
+});
 
-  animate();
+resetBtn.addEventListener('click', e => {
+  const label = document.createElement('label');
+  label.textContent = 'Assign Reset Key:';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.maxLength = 1;
+  input.style.marginLeft = '8px';
+  input.addEventListener('input', () => {
+    const key = input.value.toLowerCase();
+    if (key) {
+      resetKey = key;
+      resetBtn.textContent = `Reset (${key.toUpperCase()})`;
+      document.body.removeChild(wrapper);
+    }
+  });
+  const wrapper = document.createElement('div');
+  wrapper.style.position = 'absolute';
+  wrapper.style.top = (e.clientY + 5) + 'px';
+  wrapper.style.left = (e.clientX + 5) + 'px';
+  wrapper.style.background = '#222';
+  wrapper.style.border = '1px solid #555';
+  wrapper.style.padding = '6px';
+  wrapper.style.borderRadius = '4px';
+  wrapper.style.zIndex = 1000;
+  wrapper.appendChild(label);
+  wrapper.appendChild(input);
+  document.body.appendChild(wrapper);
+  input.focus();
+});
+
+video.ontimeupdate = () => {
+  if (!recording && currentStep < comboSteps.length && video.currentTime >= comboSteps[currentStep].time) {
+    video.pause();
+  }
+};
+
+function updateMarker() {
+  if (isFinite(video.duration) && !isDragging) {
+    const percent = video.currentTime / video.duration;
+    currentMarker.style.left = (percent * 100) + '%';
+  }
+  requestAnimationFrame(updateMarker);
+}
+requestAnimationFrame(updateMarker);
+
+comboBar.onclick = (e) => {
+  if (!isFinite(video.duration)) return;
+  const rect = comboBar.getBoundingClientRect();
+  video.currentTime = ((e.clientX - rect.left) / rect.width) * video.duration;
+};
+
+currentMarker.addEventListener('mousedown', () => {
+  isDragging = true;
+  document.body.style.userSelect = 'none';
+});
+
+document.addEventListener('mouseup', () => {
+  isDragging = false;
+  document.body.style.userSelect = '';
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (isDragging && isFinite(video.duration)) {
+    const rect = comboBar.getBoundingClientRect();
+    let percent = (e.clientX - rect.left) / rect.width;
+    percent = Math.max(0, Math.min(1, percent));
+    video.currentTime = percent * video.duration;
+  }
+});
+
+function renderMarkers() {
+  comboBar.innerHTML = '<div id="currentMarker"></div>';
+  currentMarker = document.getElementById('currentMarker');
+  currentMarker.style.cursor = 'ew-resize';
+  currentMarker.addEventListener('mousedown', () => {
+    isDragging = true;
+    document.body.style.userSelect = 'none';
+  });
+  comboSteps.forEach((step, index) => {
+    const marker = document.createElement('div');
+    marker.classList.add('comboMarker');
+    marker.style.left = (step.time / video.duration * 100) + '%';
+    const label = document.createElement('div');
+    label.className = 'comboLabel';
+    label.style.left = (step.time / video.duration * 100) + '%';
+    label.textContent = step.key;
+    if (editMode) {
+      label.oncontextmenu = (e) => {
+        e.preventDefault();
+        comboSteps.splice(index, 1);
+        renderMarkers();
+      };
+    } else {
+      label.oncontextmenu = null;
+    }
+    comboBar.appendChild(marker);
+    comboBar.appendChild(label);
+  });
+}
+
+function toggleEditMode() {
+  editMode = !editMode;
+  editToggle.textContent = `Edit Combo: ${editMode ? 'ON' : 'OFF'}`;
+  renderMarkers();
+}
+
+function resetCombo() {
+  video.pause();
+  currentStep = 0;
+  comboStartTime = null;
+  feedback.innerText = 'Combo reset.';
+  comboLog.innerText = '';
+  video.currentTime = comboSteps.length && isFinite(video.duration) ? comboSteps[0].time : 0;
+}
+
+function gradeInput() {
+  let now = performance.now();
+  if (currentStep === 0) comboStartTime = now;
+  let expectedOffset = (comboSteps[currentStep].time - comboSteps[0].time) * 1000;
+  let actualOffset = now - comboStartTime;
+  let offset = actualOffset - expectedOffset;
+  let grade = Math.abs(offset) <= 50 ? 'Perfect' : Math.abs(offset) <= 150 ? 'Good' : 'Miss';
+  const log = `Step ${currentStep + 1}: ${comboSteps[currentStep].key} → ${grade} (${offset.toFixed(0)}ms)`;
+  feedback.innerText = log;
+  comboLog.innerText += log + '\n';
+  currentStep++;
+  if (currentStep === comboSteps.length) {
+    feedback.innerText += ' - Combo Completed!';
+    comboLog.innerText += 'Combo Completed!\n';
+  }
+}
+
+function resizeApp(direction) {
+  const container = document.getElementById('container');
+  const step = 100;
+  const width = container.offsetWidth + (step * direction);
+  const height = width * 9 / 16;
+  container.style.width = `${width}px`;
+  container.style.height = `${height}px`;
+}
+
+function toggleFullScreen() {
+  const container = document.getElementById('container');
+  if (!document.fullscreenElement) {
+    container.requestFullscreen().catch(err => console.error(err));
+  } else {
+    document.exitFullscreen();
+  }
+}
+let clickOverlay = document.getElementById('clickOverlay');
+let clickSteps = [];
+
+clickOverlay.addEventListener('click', (e) => {
+  if (!editMode || !recording || !isFinite(video.duration)) return;
+  const rect = clickOverlay.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width;
+  const y = (e.clientY - rect.top) / rect.height;
+  const width = 0.1;
+  const height = 0.1;
+  const time = video.currentTime;
+  clickSteps.push({ x, y, width, height, time });
+  renderClickBoxes();
+});
+
+$1
 </script>
 </body>
 </html>
