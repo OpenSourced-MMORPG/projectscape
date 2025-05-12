@@ -223,7 +223,7 @@ resetBtn.addEventListener('click', e => {
     }
   });
   const wrapper = document.createElement('div');
-  wrapper.style.position = 'fixed';
+  wrapper.style.position = 'absolute';
   wrapper.style.top = (e.clientY + 5) + 'px';
   wrapper.style.left = (e.clientX + 5) + 'px';
   wrapper.style.background = '#222';
@@ -234,7 +234,6 @@ resetBtn.addEventListener('click', e => {
   wrapper.appendChild(label);
   wrapper.appendChild(input);
   document.body.appendChild(wrapper);
-  input.focus();
   input.focus();
 });
 
@@ -372,7 +371,7 @@ clickOverlay.addEventListener('click', (e) => {
   renderClickBoxes();
 });
 
-
+$1
 </script>
 </body>
 </html>
